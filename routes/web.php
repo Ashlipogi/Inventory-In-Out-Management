@@ -23,7 +23,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SystemSettingsController::class, 'edit'])->name('settings.edit');
     Route::post('/settings', [SystemSettingsController::class, 'update'])->name('settings.update');
 
-  Route::get('/add-item', [ItemController::class, 'addItem'])->name('add-item');
+    // Item routes
+    Route::get('/add-item', [ItemController::class, 'addItem'])->name('add-item');
+    Route::post('/items', [ItemController::class, 'store'])->name('items.store');
+    Route::put('/items/{item}', [ItemController::class, 'update'])->name('items.update');
+    Route::delete('/items/{item}', [ItemController::class, 'destroy'])->name('items.destroy');
+
     Route::get('/pull-in', [ItemController::class, 'pullIn'])->name('pull-in');
     Route::get('/pull-out', [ItemController::class, 'pullOut'])->name('pull-out');
 });
