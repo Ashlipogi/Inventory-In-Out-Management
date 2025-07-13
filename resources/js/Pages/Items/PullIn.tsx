@@ -1,7 +1,35 @@
-import React from 'react';
-import { Head } from '@inertiajs/react';
+
+import React, { useState, useMemo } from 'react';
+import { Head, useForm } from '@inertiajs/react';
 import { Layout } from '@/Components/Layout';
-import { ArrowDownToLine, Package, TrendingUp, Clock } from 'lucide-react';
+import { ArrowDownToLine, Package, TrendingUp, Clock, Search, Plus, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+
+interface Item {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  unit: string;
+  amount: number;
+  price: number;
+  created_at: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface PullInLog {
+  id: number;
+  item_id: number;
+  quantity: number;
+  notes: string;
+  created_at: string;
+  item: Item;
+  user: User;
+}
 
 interface PullInProps {
   auth: {
@@ -17,9 +45,120 @@ interface PullInProps {
     system_image: string | null;
     system_image_url: string | null;
   };
+  items: Item[];
+  units: Record<string, string>;
+  statistics: {
+    todayReceived: number;
+    thisWeekReceived: number;
+    totalItems: number;
+  };
+  recentActivity: PullInLog[];
+  flash?: {
+    success?: string;
+    error?: string;
+  };
 }
 
-export default function PullIn({ auth, systemSettings }: PullInProps) {
+export default function PullIn({ auth, systemSettings, items, units, statistics, recentActivity, flash }: PullInProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data, setData, post, processing, errors, reset } = useForm({
+    item_id: '',
+    quantity: '',
+    notes: '',
+  });
+
+  // Filter items based on search term
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return items;
+
+    const term = searchTerm.toLowerCase();
+    return items.filter(item =>
+      item.name.toLowerCase().includes(term) ||
+      item.description?.toLowerCase().includes(term) ||
+      item.category.toLowerCase().includes(term)
+    );
+  }, [items, searchTerm]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredItems.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const currentItems = filteredItems.slice(startIndex, endIndex);
+
+  // Reset to first page when search changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, rowsPerPage]);
+
+  const handlePullIn = (item: Item) => {
+    setSelectedItem(item);
+    setData('item_id', item.id.toString());
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    post(route('items.pull-in'), {
+      onSuccess: () => {
+        setIsModalOpen(false);
+        setSelectedItem(null);
+        reset();
+      },
+    });
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedItem(null);
+    reset();
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const getPaginationRange = () => {
+    const range = [];
+    const showPages = 5;
+    let start = Math.max(1, currentPage - Math.floor(showPages / 2));
+    let end = Math.min(totalPages, start + showPages - 1);
+
+    if (end - start < showPages - 1) {
+      start = Math.max(1, end - showPages + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+    return range;
+  };
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    } else if (diffInDays === 1) {
+      return 'Yesterday';
+    } else if (diffInDays < 7) {
+      return `${diffInDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
   return (
     <Layout
       header={
@@ -36,121 +175,461 @@ export default function PullIn({ auth, systemSettings }: PullInProps) {
     >
       <Head title="Pull In" />
 
-      <div className="max-w-4xl mx-auto">
-        {/* Welcome Card */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-green-100 rounded-full">
-              <ArrowDownToLine className="h-8 w-8 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">This is Pull In</h2>
-              <p className="text-gray-600 mt-1">
-                Welcome to the Pull In page. Here you can receive new inventory, restock existing items, and track incoming shipments.
-              </p>
+      <div className="max-w-6xl mx-auto">
+        {/* Success/Error Messages */}
+        {flash?.success && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-green-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-green-800">{flash.success}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {flash?.error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-red-800">{flash.error}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Today's Received</p>
-                <p className="text-2xl font-bold text-gray-900">24</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-green-100 rounded-md">
+                  <Package className="h-5 w-5 text-green-600" />
+                </div>
               </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <Package className="h-6 w-6 text-green-600" />
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Today's Received</dt>
+                  <dd className="text-lg font-medium text-gray-900">{statistics.todayReceived}</dd>
+                </dl>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">This Week</p>
-                <p className="text-2xl font-bold text-gray-900">156</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <TrendingUp className="h-6 w-6 text-blue-600" />
+              <div className="flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-green-500" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">8</p>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-blue-100 rounded-md">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                </div>
               </div>
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <Clock className="h-6 w-6 text-yellow-600" />
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">This Week</dt>
+                  <dd className="text-lg font-medium text-gray-900">{statistics.thisWeekReceived}</dd>
+                </dl>
+              </div>
+              <div className="flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-purple-100 rounded-md">
+                  <Package className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Items</dt>
+                  <dd className="text-lg font-medium text-gray-900">{statistics.totalItems}</dd>
+                </dl>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <ArrowDownToLine className="h-5 w-5 text-green-600" />
+        {/* Controls Section */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+            {/* Search Bar */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
               </div>
-              <h3 className="font-medium text-gray-900">Quick Receive</h3>
+              <input
+                type="text"
+                placeholder="Search items..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm w-full sm:w-64"
+              />
             </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Quickly receive items by scanning barcodes or entering item codes.
-            </p>
-            <button className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              Start Receiving
-            </button>
+
+            {/* Rows per page selector */}
+            <div className="flex items-center space-x-2">
+              <label htmlFor="rowsPerPage" className="text-sm text-gray-700 whitespace-nowrap">
+                Rows per page:
+              </label>
+              <select
+                id="rowsPerPage"
+                value={rowsPerPage}
+                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Items Selection Section */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-md mb-8">
+          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-lg leading-6 font-medium text-gray-900">Select Items to Pull In</h3>
+                <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                  {searchTerm ? (
+                    <>
+                      {filteredItems.length} of {items.length} items
+                      {searchTerm && (
+                        <span className="ml-1">
+                          matching "{searchTerm}"
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    `${items.length} items available`
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="h-5 w-5 text-blue-600" />
-              </div>
-              <h3 className="font-medium text-gray-900">Bulk Receive</h3>
+          {filteredItems.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                {searchTerm ? 'No items found' : 'No items available'}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {searchTerm ? 'Try adjusting your search terms.' : 'Add items to your inventory first.'}
+              </p>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-500"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Process multiple items at once from purchase orders or shipments.
-            </p>
-            <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Bulk Process
-            </button>
-          </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Item
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Current Stock
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Unit
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {currentItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                            <div className="text-sm text-gray-500">{item.description || 'No description'}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.category}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {parseFloat(item.amount.toString()).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {units[item.unit] || item.unit}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₱{parseFloat(item.price.toString()).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => handlePullIn(item)}
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Pull In
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                  <div className="flex-1 flex justify-between sm:hidden">
+                    <button
+                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                        <span className="font-medium">{Math.min(endIndex, filteredItems.length)}</span> of{' '}
+                        <span className="font-medium">{filteredItems.length}</span> results
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                        <button
+                          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        {getPaginationRange().map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                              page === currentPage
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage === totalPages}
+                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Pull In Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-900">Office Supplies - 25 units</span>
-              </div>
-              <span className="text-sm text-gray-500">2 hours ago</span>
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Pull In Activity</h3>
+          </div>
+          {recentActivity.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No recent activity</h3>
+              <p className="mt-1 text-sm text-gray-500">Pull in some items to see activity here.</p>
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-100">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-900">Electronics - 12 units</span>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {recentActivity.map((activity) => (
+                <li key={activity.id} className="px-4 py-4 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <Package className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {activity.item.name} - {parseFloat(activity.quantity.toString()).toFixed(2)} {units[activity.item.unit] || activity.item.unit}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {activity.item.category} • by {activity.user.name}
+                          {activity.notes && (
+                            <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded">
+                              {activity.notes}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">{formatRelativeTime(activity.created_at)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Pull In Modal */}
+        {isModalOpen && selectedItem && (
+          <div className="fixed inset-0 z-50 overflow-y-auto">
+            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+              <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeModal}></div>
+
+              <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+
+              <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <form onSubmit={handleSubmit}>
+                  <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium text-gray-900">Pull In Item</h3>
+                      <button
+                        type="button"
+                        onClick={closeModal}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-6 w-6" />
+                      </button>
+                    </div>
+
+                    {/* Item Info */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-gray-900">{selectedItem.name}</h4>
+                          <p className="text-sm text-gray-600">{selectedItem.description || 'No description'}</p>
+                          <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                            <span>Category: {selectedItem.category}</span>
+                            <span>Current Stock: {parseFloat(selectedItem.amount.toString()).toFixed(2)} {units[selectedItem.unit] || selectedItem.unit}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">₱{parseFloat(selectedItem.price.toString()).toFixed(2)}</p>
+                          <p className="text-xs text-gray-500">per {units[selectedItem.unit] || selectedItem.unit}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Quantity */}
+                      <div>
+                        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
+                          Quantity to Pull In
+                        </label>
+                        <input
+                          type="number"
+                          id="quantity"
+                          step="0.01"
+                          min="0.01"
+                          value={data.quantity}
+                          onChange={(e) => setData('quantity', e.target.value)}
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                          placeholder="Enter quantity"
+                          required
+                        />
+                        {errors.quantity && <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>}
+                      </div>
+
+                      {/* Notes */}
+                      <div>
+                        <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                          Notes (Optional)
+                        </label>
+                        <textarea
+                          id="notes"
+                          value={data.notes}
+                          onChange={(e) => setData('notes', e.target.value)}
+                          rows={3}
+                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                          placeholder="Add any notes about this pull in..."
+                        />
+                        {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
+                      </div>
+
+                      {/* Summary */}
+                      {data.quantity && (
+                        <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-green-800">
+                              New Stock Total:
+                            </span>
+                            <span className="text-sm font-bold text-green-800">
+                              {(parseFloat(selectedItem.amount.toString()) + parseFloat(data.quantity || '0')).toFixed(2)} {units[selectedItem.unit] || selectedItem.unit}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="text-sm text-green-700">
+                              Total Value:
+                            </span>
+                            <span className="text-sm font-medium text-green-700">
+                              ₱{(parseFloat(data.quantity || '0') * parseFloat(selectedItem.price.toString())).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button
+                      type="submit"
+                      disabled={processing}
+                      className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+                    >
+                      {processing ? 'Processing...' : 'Pull In Item'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
               </div>
-              <span className="text-sm text-gray-500">4 hours ago</span>
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-900">Furniture - 8 units</span>
-              </div>
-              <span className="text-sm text-gray-500">Yesterday</span>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </Layout>
   );

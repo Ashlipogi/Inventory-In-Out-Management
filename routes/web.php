@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/items', [ItemController::class, 'store'])->name('items.store');
     Route::put('/items/{item}', [ItemController::class, 'update'])->name('items.update');
     Route::delete('/items/{item}', [ItemController::class, 'destroy'])->name('items.destroy');
-
+    Route::post('/pull-in', [ItemController::class, 'storePullIn'])->name('items.pull-in');
     Route::get('/pull-in', [ItemController::class, 'pullIn'])->name('pull-in');
     Route::get('/pull-out', [ItemController::class, 'pullOut'])->name('pull-out');
 });

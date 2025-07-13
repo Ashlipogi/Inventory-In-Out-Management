@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\PullInLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use Carbon\Carbon;
 
 class ItemController extends Controller
 {
@@ -75,7 +77,57 @@ class ItemController extends Controller
 
     public function pullIn(): Response
     {
-        return Inertia::render('Items/PullIn');
+        $items = Item::orderBy('name')->get();
+
+        // Get pull-in statistics
+        $today = Carbon::today();
+        $thisWeek = Carbon::now()->startOfWeek();
+
+        $todayReceived = PullInLog::whereDate('created_at', $today)->count();
+        $thisWeekReceived = PullInLog::where('created_at', '>=', $thisWeek)->count();
+
+        // Get recent pull-in activity
+        $recentActivity = PullInLog::with(['item', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return Inertia::render('Items/PullIn', [
+            'items' => $items,
+            'units' => Item::getAvailableUnits(),
+            'statistics' => [
+                'todayReceived' => $todayReceived,
+                'thisWeekReceived' => $thisWeekReceived,
+                'totalItems' => $items->count(),
+            ],
+            'recentActivity' => $recentActivity,
+        ]);
+    }
+
+    public function storePullIn(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'item_id' => 'required|exists:items,id',
+            'quantity' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string',
+        ]);
+
+        $item = Item::findOrFail($request->item_id);
+
+        // Update the item amount by adding the new quantity
+        $item->update([
+            'amount' => $item->amount + $request->quantity,
+        ]);
+
+        // Log the pull-in activity
+        PullInLog::create([
+            'item_id' => $item->id,
+            'quantity' => $request->quantity,
+            'notes' => $request->notes,
+            'user_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('pull-in')->with('success', 'Item pulled in successfully!');
     }
 
     public function pullOut(): Response
