@@ -169,99 +169,82 @@ export function Sidebar({ isCollapsed, onToggle, user, systemSettings }: Sidebar
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-2 space-y-0.5">
-        {navigationItems.map((item) => {
-          const isActiveItem = window.location.pathname === item.href;
-          const Icon = item.icon;
+     {/* Navigation */}
+<nav className="flex-1 px-2 py-2 space-y-0.5">
+  {navigationItems.map((item) => {
+    const isActiveItem = window.location.pathname === item.href;
+    const Icon = item.icon;
 
-          return (
+    return (
+      <React.Fragment key={item.name}>
+        <button
+          onClick={() => handleNavClick(item.href)}
+          className={cn(
+            "w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
+            isActiveItem
+              ? "bg-gray-100 text-gray-900"
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          )}
+        >
+          <Icon className="h-5 w-5 flex-shrink-0" />
+          {!isCollapsed && <span className="ml-3">{item.name}</span>}
+        </button>
+
+        {/* Insert the dropdown immediately after Dashboard */}
+        {item.name === 'Dashboard' && (
+          <div className="space-y-0.5">
             <button
-              key={item.name}
-              onClick={() => handleNavClick(item.href)}
+              onClick={() => toggleDropdown("Item")}
               className={cn(
-                "w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
-                isActiveItem
+                "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
+                isActive(["/add-item", "/pull-in", "/pull-out"]) || activeDropdown === "Item"
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               )}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <div className="flex items-center">
+                <Plus className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span className="ml-3">Item</span>}
+              </div>
               {!isCollapsed && (
-                <span className="ml-3">{item.name}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform",
+                    activeDropdown === "Item" ? "rotate-180" : ""
+                  )}
+                />
               )}
             </button>
-          );
-        })}
 
-        {/* Add Item Dropdown */}
-        <div className="space-y-0.5">
-  <button
-    onClick={() => toggleDropdown("Item")}
-    className={cn(
-      "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
-      isActive(["/add-item", "/pull-in", "/pull-out"]) || activeDropdown === "Item"
-        ? "bg-gray-100 text-gray-900"
-        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-    )}
-  >
-    <div className="flex items-center">
-      <Plus className="h-5 w-5 flex-shrink-0" />
-      {!isCollapsed && <span className="ml-3">Item</span>}
-    </div>
-    {!isCollapsed && (
-      <ChevronDown
-        className={cn(
-          "h-4 w-4 transition-transform",
-          activeDropdown === "Item" ? "rotate-180" : ""
+            {activeDropdown === "Item" && !isCollapsed && (
+              <div className="ml-5 mt-2 border-l border-gray-300 pl-4 space-y-1">
+                {[
+                  { path: '/add-item', label: 'Add Item' },
+                  { path: '/pull-in', label: 'Pull In' },
+                  { path: '/pull-out', label: 'Pull Out' },
+                ].map(({ path, label }) => (
+                  <button
+                    key={path}
+                    onClick={() => router.get(path)}
+                    className={cn(
+                      "relative block w-full px-4 py-2 rounded-md text-sm text-left transition-colors hover:bg-gray-50",
+                      isActive(path)
+                        ? "bg-gray-100 text-gray-500"
+                        : "text-gray-600 hover:text-gray-900",
+                      "before:absolute before:-left-4 before:top-1/2 before:h-0.5 before:w-3 before:bg-gray-300"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
-      />
-    )}
-  </button>
-
-  {activeDropdown === "Item" && !isCollapsed && (
-    <div className="ml-5 mt-2 border-l border-gray-300 pl-4 space-y-1">
-      <button
-        onClick={() => router.get('/add-item')}
-        className={cn(
-          "relative block w-full px-4 py-2 rounded-md text-sm text-left transition-colors hover:bg-gray-50",
-          isActive("/add-item")
-            ? "bg-gray-100 text-gray-500"
-            : "text-gray-600 hover:text-gray-900",
-          "before:absolute before:-left-4 before:top-1/2 before:h-0.5 before:w-3 before:bg-gray-300"
-        )}
-      >
-        Add Item
-      </button>
-
-      <button
-        onClick={() => router.get('/pull-in')}
-        className={cn(
-          "relative block w-full px-4 py-2 rounded-md text-sm text-left transition-colors hover:bg-gray-50",
-          isActive("/pull-in")
-            ? "bg-gray-100 text-gray-500"
-            : "text-gray-600 hover:text-gray-900",
-          "before:absolute before:-left-4 before:top-1/2 before:h-0.5 before:w-3 before:bg-gray-300"
-        )}
-      >
-        Pull In
-      </button>
-
-      <button
-        onClick={() => router.get('/pull-out')}
-        className={cn(
-          "relative block w-full px-4 py-2 rounded-md text-sm text-left transition-colors hover:bg-gray-50",
-          isActive("/pull-out")
-            ? "bg-gray-100 text-gray-500"
-            : "text-gray-600 hover:text-gray-900",
-          "before:absolute before:-left-4 before:top-1/2 before:h-0.5 before:w-3 before:bg-gray-300"
-        )}
-      >
-        Pull Out
-      </button>
-    </div>
-  )}
-</div>
-      </nav>
+      </React.Fragment>
+    );
+  })}
+</nav>
 
       {/* User Section */}
       <div className="border-t border-gray-200 p-2 pt-1">

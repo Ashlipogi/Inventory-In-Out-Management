@@ -7,12 +7,11 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', [AuthenticatedSessionController::class, 'create'])->name('login');
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -28,9 +27,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/items', [ItemController::class, 'store'])->name('items.store');
     Route::put('/items/{item}', [ItemController::class, 'update'])->name('items.update');
     Route::delete('/items/{item}', [ItemController::class, 'destroy'])->name('items.destroy');
-    Route::post('/pull-in', [ItemController::class, 'storePullIn'])->name('items.pull-in');
+
+    // Pull In routes
     Route::get('/pull-in', [ItemController::class, 'pullIn'])->name('pull-in');
+    Route::post('/pull-in', [ItemController::class, 'storePullIn'])->name('items.pull-in');
+
+    // Pull Out routes
     Route::get('/pull-out', [ItemController::class, 'pullOut'])->name('pull-out');
+    Route::post('/pull-out', [ItemController::class, 'storePullOut'])->name('items.pull-out');
 });
 
 require __DIR__.'/auth.php';

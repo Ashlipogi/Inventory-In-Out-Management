@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\PullInLog;
+use App\Models\PullOutLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -132,6 +133,68 @@ class ItemController extends Controller
 
     public function pullOut(): Response
     {
-        return Inertia::render('Items/PullOut');
+        $items = Item::where('amount', '>', 0)->orderBy('name')->get();
+
+        // Get pull-out statistics
+        $today = Carbon::today();
+        $thisWeek = Carbon::now()->startOfWeek();
+
+        $todayDispatched = PullOutLog::whereDate('created_at', $today)->count();
+        $thisWeekDispatched = PullOutLog::where('created_at', '>=', $thisWeek)->count();
+
+        // Get recent pull-out activity
+        $recentActivity = PullOutLog::with(['item', 'user'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Get low stock items (items with amount <= 10)
+        $lowStockItems = Item::where('amount', '<=', 10)
+            ->where('amount', '>', 0)
+            ->orderBy('amount')
+            ->get();
+
+        return Inertia::render('Items/PullOut', [
+            'items' => $items,
+            'units' => Item::getAvailableUnits(),
+            'statistics' => [
+                'todayDispatched' => $todayDispatched,
+                'thisWeekDispatched' => $thisWeekDispatched,
+                'lowStockAlerts' => $lowStockItems->count(),
+            ],
+            'recentActivity' => $recentActivity,
+            'lowStockItems' => $lowStockItems,
+        ]);
+    }
+
+    public function storePullOut(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'item_id' => 'required|exists:items,id',
+            'quantity' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string',
+        ]);
+
+        $item = Item::findOrFail($request->item_id);
+
+        // Check if we have enough stock
+        if ($item->amount < $request->quantity) {
+            return redirect()->route('pull-out')->with('error', 'Insufficient stock! Available: ' . $item->amount . ' ' . $item->unit);
+        }
+
+        // Update the item amount by subtracting the quantity
+        $item->update([
+            'amount' => $item->amount - $request->quantity,
+        ]);
+
+        // Log the pull-out activity
+        PullOutLog::create([
+            'item_id' => $item->id,
+            'quantity' => $request->quantity,
+            'notes' => $request->notes,
+            'user_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('pull-out')->with('success', 'Item pulled out successfully!');
     }
 }

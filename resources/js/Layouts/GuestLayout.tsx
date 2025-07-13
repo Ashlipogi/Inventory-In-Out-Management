@@ -16,11 +16,6 @@ export default function Guest({ children }: PropsWithChildren) {
                         height="80px"
                     />
                 </Link>
-                {systemSettings?.system_name && (
-                    <h1 className="mt-3 text-xl font-semibold text-gray-700 text-center">
-                        {systemSettings.system_name}
-                    </h1>
-                )}
             </div>
 
             <div className="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
