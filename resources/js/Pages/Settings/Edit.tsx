@@ -1,6 +1,7 @@
 import { Layout } from '@/Components/Layout';
 import { PageProps } from '@/types';
 import { Head } from '@inertiajs/react';
+import { Settings2} from 'lucide-react';
 import UpdateSettingsForm from './Partials/UpdateSettingsForm';
 
 interface SystemSettings {
@@ -24,9 +25,15 @@ export default function Edit({
     return (
         <Layout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Customize System
-                </h2>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Settings2 className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Customize System</h1>
+            <p className="text-sm text-gray-600">Edit your System name and System Image</p>
+          </div>
+        </div>
             }
         >
             <Head title="Customize System" />

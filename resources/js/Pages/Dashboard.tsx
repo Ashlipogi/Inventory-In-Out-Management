@@ -1,15 +1,21 @@
 
 import React from 'react';
 import { Layout } from '@/Components/Layout';
-import { Users, ShoppingCart, DollarSign, TrendingUp } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 export default function Dashboard() {
   return (
     <Layout
       header={
-        <h2 className="text-xl font-semibold leading-tight text-gray-800">
-          Dashbasdoard
-        </h2>
+                       <div className="flex items-center space-x-3">
+          <div className="p-2 bg-blue-100 rounded-lg">
+            <Home className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-600">Edit your Profile Information</p>
+          </div>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -24,7 +30,7 @@ export default function Dashboard() {
         </div>
 
 
-      
+
       </div>
     </Layout>
   );
