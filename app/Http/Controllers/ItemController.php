@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\AddItemLog;
 use App\Models\PullInLog;
 use App\Models\PullOutLog;
 use Illuminate\Http\Request;
@@ -21,19 +22,14 @@ class ItemController extends Controller
         $today = Carbon::today();
         $thisWeek = Carbon::now()->startOfWeek();
 
-        $todayAdded = Item::whereDate('created_at', $today)->count();
-        $thisWeekAdded = Item::where('created_at', '>=', $thisWeek)->count();
+        $todayAdded = AddItemLog::whereDate('created_at', $today)->count();
+        $thisWeekAdded = AddItemLog::where('created_at', '>=', $thisWeek)->count();
 
-        // Get recent item additions
-        $recentAdditions = Item::orderBy('created_at', 'desc')
+        // Get recent item additions from AddItemLog
+        $recentAdditions = AddItemLog::with(['item', 'user'])
+            ->orderBy('created_at', 'desc')
             ->limit(10)
-            ->get()
-            ->map(function($item) {
-                // Since items don't have user_id by default, we'll use the current user
-                // In a real scenario, you'd want to add user_id to items table
-                $item->user = auth()->user();
-                return $item;
-            });
+            ->get();
 
         return Inertia::render('Items/AddItem', [
             'items' => $items,
@@ -68,7 +64,7 @@ class ItemController extends Controller
             'costprice' => 'required|numeric|min:0',
         ]);
 
-        Item::create([
+        $item = Item::create([
             'name' => $request->name,
             'description' => $request->description,
             'category' => $request->category,
@@ -76,6 +72,15 @@ class ItemController extends Controller
             'amount' => $request->amount,
             'price' => $request->price,
             'costprice' => $request->costprice,
+        ]);
+
+        // Log the item addition
+        AddItemLog::create([
+            'item_id' => $item->id,
+            'quantity' => $request->amount,
+            'notes' => 'Item created with initial stock',
+            'user_id' => auth()->id(),
+            'action_type' => 'created',
         ]);
 
         return redirect()->route('add-item')->with('success', 'Item added successfully!');
@@ -93,6 +98,9 @@ class ItemController extends Controller
             'costprice' => 'required|numeric|min:0',
         ]);
 
+        $oldAmount = $item->amount;
+        $newAmount = $request->amount;
+
         $item->update([
             'name' => $request->name,
             'description' => $request->description,
@@ -102,6 +110,18 @@ class ItemController extends Controller
             'price' => $request->price,
             'costprice' => $request->costprice,
         ]);
+
+        // Log the item update if quantity changed
+        if ($oldAmount != $newAmount) {
+            $quantityDiff = $newAmount - $oldAmount;
+            AddItemLog::create([
+                'item_id' => $item->id,
+                'quantity' => $quantityDiff,
+                'notes' => 'Item quantity updated from ' . $oldAmount . ' to ' . $newAmount,
+                'user_id' => auth()->id(),
+                'action_type' => 'updated',
+            ]);
+        }
 
         return redirect()->route('add-item')->with('success', 'Item updated successfully!');
     }

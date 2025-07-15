@@ -20,6 +20,21 @@ interface Item {
   };
 }
 
+interface AddItemLogEntry {
+  id: number;
+  item_id: number;
+  quantity: number;
+  notes: string;
+  action_type: 'created' | 'updated';
+  created_at: string;
+  item: Item;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
 interface AddItemProps {
   auth: {
     user: {
@@ -44,7 +59,7 @@ interface AddItemProps {
     totalCostValue: number;
     totalProfit: number;
   };
-  recentAdditions: Item[];
+  recentAdditions: AddItemLogEntry[];
   flash?: {
     success?: string;
     error?: string;
@@ -184,6 +199,28 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
       return (((price - costprice) / costprice) * 100).toFixed(1);
     }
     return '0.0';
+  };
+
+  const getActionTypeIcon = (actionType: string) => {
+    switch (actionType) {
+      case 'created':
+        return <Plus className="h-5 w-5 text-green-400" />;
+      case 'updated':
+        return <Edit2 className="h-5 w-5 text-blue-400" />;
+      default:
+        return <Package className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
+  const getActionTypeText = (actionType: string) => {
+    switch (actionType) {
+      case 'created':
+        return 'Created';
+      case 'updated':
+        return 'Updated';
+      default:
+        return 'Action';
+    }
   };
 
   return (
@@ -575,10 +612,11 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
           )}
         </div>
 
-        {/* Recent Additions */}
+        {/* Recent Additions - Updated to show AddItemLog */}
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <div className="px-4 py-5 sm:px-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Item Additions</h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">Log of all item creation and update activities</p>
           </div>
           {recentAdditions.length === 0 ? (
             <div className="text-center py-12">
@@ -588,32 +626,54 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
             </div>
           ) : (
             <ul className="divide-y divide-gray-200">
-              {recentAdditions.map((item) => (
-                <li key={item.id} className="px-4 py-4 sm:px-6">
+              {recentAdditions.map((log) => (
+                <li key={log.id} className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <Plus className="h-5 w-5 text-blue-400" />
+                        {getActionTypeIcon(log.action_type)}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {item.name} - {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
+                          {getActionTypeText(log.action_type)}: {log.item.name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {item.category} • Cost: ₱{parseFloat(item.costprice.toString()).toFixed(2)} • Selling: ₱{parseFloat(item.price.toString()).toFixed(2)}
-                          {item.user && (
-                            <span className="ml-2">• by {item.user.name}</span>
+                          Quantity: {parseFloat(log.quantity.toString()).toFixed(2)} {units[log.item.unit] || log.item.unit}
+                          {log.action_type === 'created' && (
+                            <>
+                              • Cost: ₱{parseFloat(log.item.costprice.toString()).toFixed(2)}
+                              • Selling: ₱{parseFloat(log.item.price.toString()).toFixed(2)}
+                            </>
                           )}
-                          <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded text-green-800">
-                            Total Value: ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
+                          • by {log.user.name}
+                        </div>
+                        {log.notes && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            Notes: {log.notes}
+                          </div>
+                        )}
+                        <div className="flex space-x-2 mt-1">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            log.action_type === 'created'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {log.action_type === 'created' ? 'New Item' : 'Updated Item'}
                           </span>
-                          <span className="ml-2 text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
-                            Profit: ₱{(parseFloat(item.amount.toString()) * (parseFloat(item.price.toString()) - parseFloat(item.costprice.toString()))).toFixed(2)}
-                          </span>
+                          {log.action_type === 'created' && (
+                            <>
+                              <span className="text-xs bg-emerald-100 px-2 py-1 rounded text-emerald-800">
+                                Total Value: ₱{(parseFloat(log.quantity.toString()) * parseFloat(log.item.price.toString())).toFixed(2)}
+                              </span>
+                              <span className="text-xs bg-yellow-100 px-2 py-1 rounded text-yellow-800">
+                                Profit: ₱{(parseFloat(log.quantity.toString()) * (parseFloat(log.item.price.toString()) - parseFloat(log.item.costprice.toString()))).toFixed(2)}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500">{formatRelativeTime(item.created_at)}</div>
+                    <div className="text-sm text-gray-500">{formatRelativeTime(log.created_at)}</div>
                   </div>
                 </li>
               ))}
