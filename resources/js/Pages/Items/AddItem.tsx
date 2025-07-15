@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import { Layout } from '@/Components/Layout';
-import { Plus, Package, AlertCircle, Edit2, Trash2, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Package, AlertCircle, Edit2, Trash2, X, Search, ChevronLeft, ChevronRight, TrendingUp, Clock, DollarSign } from 'lucide-react';
 
 interface Item {
   id: number;
@@ -12,6 +12,11 @@ interface Item {
   amount: number;
   price: number;
   created_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 interface AddItemProps {
@@ -30,13 +35,20 @@ interface AddItemProps {
   };
   items: Item[];
   units: Record<string, string>;
+  statistics: {
+    todayAdded: number;
+    thisWeekAdded: number;
+    totalItems: number;
+    totalValue: number;
+  };
+  recentAdditions: Item[];
   flash?: {
     success?: string;
     error?: string;
   };
 }
 
-export default function AddItem({ auth, systemSettings, items, units, flash }: AddItemProps) {
+export default function AddItem({ auth, systemSettings, items, units, statistics, recentAdditions, flash }: AddItemProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,6 +154,26 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
     return range;
   };
 
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    } else if (diffInDays === 1) {
+      return 'Yesterday';
+    } else if (diffInDays < 7) {
+      return `${diffInDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+
   return (
     <Layout
       header={
@@ -185,6 +217,79 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
             </div>
           </div>
         )}
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-blue-100 rounded-md">
+                  <Plus className="h-5 w-5 text-blue-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Today's Added</dt>
+                  <dd className="text-lg font-medium text-gray-900">{statistics.todayAdded}</dd>
+                </dl>
+              </div>
+              <div className="flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-green-100 rounded-md">
+                  <Clock className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">This Week</dt>
+                  <dd className="text-lg font-medium text-gray-900">{statistics.thisWeekAdded}</dd>
+                </dl>
+              </div>
+              <div className="flex-shrink-0">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-purple-100 rounded-md">
+                  <Package className="h-5 w-5 text-purple-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Items</dt>
+                  <dd className="text-lg font-medium text-gray-900">{statistics.totalItems}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-yellow-100 rounded-md">
+                  <DollarSign className="h-5 w-5 text-yellow-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Value</dt>
+                  <dd className="text-lg font-medium text-gray-900">₱{statistics.totalValue.toFixed(2)}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Controls Section */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -233,7 +338,7 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
         </div>
 
         {/* Items Table */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="bg-white shadow overflow-hidden sm:rounded-md mb-8">
           <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
               <div>
@@ -299,7 +404,7 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
                         Unit
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount
+                        Current Stock
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Price
@@ -421,6 +526,49 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
           )}
         </div>
 
+        {/* Recent Additions */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Item Additions</h3>
+          </div>
+          {recentAdditions.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No recent additions</h3>
+              <p className="mt-1 text-sm text-gray-500">Add some items to see activity here.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-200">
+              {recentAdditions.map((item) => (
+                <li key={item.id} className="px-4 py-4 sm:px-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <Plus className="h-5 w-5 text-blue-400" />
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.name} - {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {item.category} • ₱{parseFloat(item.price.toString()).toFixed(2)} per {units[item.unit] || item.unit}
+                          {item.user && (
+                            <span className="ml-2">• by {item.user.name}</span>
+                          )}
+                          <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded text-green-800">
+                            Total Value: ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500">{formatRelativeTime(item.created_at)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {/* Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -465,7 +613,7 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
                       {/* Description */}
                       <div>
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                          Description
+                          Description(Optional)
                         </label>
                         <textarea
                           id="description"
@@ -494,45 +642,47 @@ export default function AddItem({ auth, systemSettings, items, units, flash }: A
                         {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
                       </div>
 
-                      {/* Unit */}
-                      <div>
-                        <label htmlFor="unit" className="block text-sm font-medium text-gray-700">
-                          Unit
-                        </label>
-                        <select
-                          id="unit"
-                          value={data.unit}
-                          onChange={(e) => setData('unit', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          required
-                        >
-                          <option value="">Select Unit</option>
-                          {Object.entries(units).map(([key, value]) => (
-                            <option key={key} value={key}>
-                              {value}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.unit && <p className="mt-1 text-sm text-red-600">{errors.unit}</p>}
-                      </div>
+                      <div className="flex gap-4">
+                        {/* Quantity */}
+                        <div className="w-1/2">
+                          <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+                            Quantity
+                          </label>
+                          <input
+                            type="number"
+                            id="amount"
+                            step="0.01"
+                            min="0"
+                            value={data.amount}
+                            onChange={(e) => setData('amount', e.target.value)}
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            placeholder="Enter Stock"
+                            required
+                          />
+                          {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
+                        </div>
 
-                      {/* Amount */}
-                      <div>
-                        <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                          Amount
-                        </label>
-                        <input
-                          type="number"
-                          id="amount"
-                          step="0.01"
-                          min="0"
-                          value={data.amount}
-                          onChange={(e) => setData('amount', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          placeholder="Enter amount"
-                          required
-                        />
-                        {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
+                        {/* Unit */}
+                        <div className="w-1/2">
+                          <label htmlFor="unit" className="block text-sm font-medium text-gray-700">
+                            Unit
+                          </label>
+                          <select
+                            id="unit"
+                            value={data.unit}
+                            onChange={(e) => setData('unit', e.target.value)}
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            required
+                          >
+                            <option value="">Select Unit</option>
+                            {Object.entries(units).map(([key, value]) => (
+                              <option key={key} value={key}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                          {errors.unit && <p className="mt-1 text-sm text-red-600">{errors.unit}</p>}
+                        </div>
                       </div>
 
                       {/* Price */}

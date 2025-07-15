@@ -17,9 +17,36 @@ class ItemController extends Controller
     {
         $items = Item::orderBy('created_at', 'desc')->get();
 
+        // Get item creation statistics
+        $today = Carbon::today();
+        $thisWeek = Carbon::now()->startOfWeek();
+
+        $todayAdded = Item::whereDate('created_at', $today)->count();
+        $thisWeekAdded = Item::where('created_at', '>=', $thisWeek)->count();
+
+        // Get recent item additions
+        $recentAdditions = Item::orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function($item) {
+                // Since items don't have user_id by default, we'll use the current user
+                // In a real scenario, you'd want to add user_id to items table
+                $item->user = auth()->user();
+                return $item;
+            });
+
         return Inertia::render('Items/AddItem', [
             'items' => $items,
             'units' => Item::getAvailableUnits(),
+            'statistics' => [
+                'todayAdded' => $todayAdded,
+                'thisWeekAdded' => $thisWeekAdded,
+                'totalItems' => $items->count(),
+                'totalValue' => $items->sum(function($item) {
+                    return $item->amount * $item->price;
+                }),
+            ],
+            'recentAdditions' => $recentAdditions,
         ]);
     }
 

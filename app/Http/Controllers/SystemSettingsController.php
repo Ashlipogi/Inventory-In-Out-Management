@@ -63,6 +63,6 @@ class SystemSettingsController extends Controller
         // Update settings
         SystemSettings::updateSettings($data);
 
-        return redirect()->route('settings.edit')->with('status', 'System settings updated successfully!');
+        return redirect()->route('settings.edit')->with('success', 'System settings updated successfully!');
     }
 }

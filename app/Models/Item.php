@@ -42,6 +42,7 @@ class Item extends Model
             'set' => 'Set',
             'pair' => 'Pair',
             'dozen' => 'Dozen',
+            'sks' => 'Sack',
         ];
     }
 

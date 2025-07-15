@@ -45,6 +45,10 @@ class HandleInertiaRequests extends Middleware
                     : null,
             ],
             'systemSettings' => fn () => $this->getSystemSettings(),
+             'flash' => [
+            'success' => fn () => $request->session()->get('success'),
+            'error' => fn () => $request->session()->get('error'),
+        ],
         ];
     }
 

@@ -64,9 +64,7 @@ export function Sidebar({ isCollapsed, onToggle, user, systemSettings }: Sidebar
   const [systemImageError, setSystemImageError] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
-  // Debug: Log systemSettings to console
-  console.log('Current systemSettings:', systemSettings);
-  console.log('Current pathname:', window.location.pathname);
+
 
   const handleNavClick = (href: string) => {
     router.visit(href);
@@ -109,32 +107,33 @@ export function Sidebar({ isCollapsed, onToggle, user, systemSettings }: Sidebar
     >
       {/* Sidebar Header */}
       <div className="flex items-center p-4 border-b border-gray-200 min-w-0">
-        {!isCollapsed && (
-          <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-              {displaySystemImage && !systemImageError ? (
-                <img
-                  src={displaySystemImage}
-                  alt={displaySystemName}
-                  className="w-full h-full object-cover rounded"
-                  onError={handleSystemImageError}
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-800 text-white rounded flex items-center justify-center">
-                  <span className="font-bold text-sm">
-                    {displaySystemName.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-            </div>
-            <span
-              className="text-lg font-semibold text-gray-800 truncate min-w-0"
-              title={displaySystemName}
-            >
-              {displaySystemName}
-            </span>
-          </div>
-        )}
+{!isCollapsed && (
+  <div className="flex flex-col items-center justify-center space-y-2 flex-1">
+    <div className="w-12 h-12 rounded-full overflow-hidden">
+      {displaySystemImage && !systemImageError ? (
+        <img
+          src={displaySystemImage}
+          alt={displaySystemName}
+          className="w-full h-full object-cover rounded-full"
+          onError={handleSystemImageError}
+        />
+      ) : (
+        <div className="w-full h-full bg-gray-800 text-white rounded-full flex items-center justify-center">
+          <span className="font-bold text-sm">
+            {displaySystemName.charAt(0).toUpperCase()}
+          </span>
+        </div>
+      )}
+    </div>
+    <span
+      className="text-sm font-semibold text-gray-800 text-center"
+      title={displaySystemName}
+    >
+      {displaySystemName}
+    </span>
+  </div>
+)}
+
 
         {isCollapsed && (
           <div className="flex items-center justify-center w-full">
@@ -158,14 +157,14 @@ export function Sidebar({ isCollapsed, onToggle, user, systemSettings }: Sidebar
         )}
 
         {/* Toggle button only shows when sidebar is expanded */}
-        {!isCollapsed && (
+        {/* {!isCollapsed && (
           <button
             onClick={onToggle}
             className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 ml-2"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-        )}
+        )} */}
       </div>
 
       {/* Navigation */}
