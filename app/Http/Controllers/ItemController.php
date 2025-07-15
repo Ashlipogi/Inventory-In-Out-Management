@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use App\Models\ItemAddLog;
 use App\Models\PullInLog;
 use App\Models\PullOutLog;
 use Illuminate\Http\Request;
@@ -21,19 +22,14 @@ class ItemController extends Controller
         $today = Carbon::today();
         $thisWeek = Carbon::now()->startOfWeek();
 
-        $todayAdded = Item::whereDate('created_at', $today)->count();
-        $thisWeekAdded = Item::where('created_at', '>=', $thisWeek)->count();
+        $todayAdded = ItemAddLog::whereDate('created_at', $today)->count();
+        $thisWeekAdded = ItemAddLog::where('created_at', '>=', $thisWeek)->count();
 
-        // Get recent item additions
-        $recentAdditions = Item::orderBy('created_at', 'desc')
+        // Get recent item additions from ItemAddLog
+        $recentAdditions = ItemAddLog::with(['item', 'user'])
+            ->orderBy('created_at', 'desc')
             ->limit(10)
-            ->get()
-            ->map(function($item) {
-                // Since items don't have user_id by default, we'll use the current user
-                // In a real scenario, you'd want to add user_id to items table
-                $item->user = auth()->user();
-                return $item;
-            });
+            ->get();
 
         return Inertia::render('Items/AddItem', [
             'items' => $items,
@@ -42,9 +38,6 @@ class ItemController extends Controller
                 'todayAdded' => $todayAdded,
                 'thisWeekAdded' => $thisWeekAdded,
                 'totalItems' => $items->count(),
-                'totalValue' => $items->sum(function($item) {
-                    return $item->amount * $item->price;
-                }),
             ],
             'recentAdditions' => $recentAdditions,
         ]);
@@ -58,16 +51,23 @@ class ItemController extends Controller
             'category' => 'required|string|max:255',
             'unit' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
-            'price' => 'required|numeric|min:0',
         ]);
 
-        Item::create([
+        // Create the item
+        $item = Item::create([
             'name' => $request->name,
             'description' => $request->description,
             'category' => $request->category,
             'unit' => $request->unit,
             'amount' => $request->amount,
-            'price' => $request->price,
+        ]);
+
+        // Log the item addition
+        ItemAddLog::create([
+            'item_id' => $item->id,
+            'initial_quantity' => $request->amount,
+            'notes' => 'Initial item creation',
+            'user_id' => auth()->id(),
         ]);
 
         return redirect()->route('add-item')->with('success', 'Item added successfully!');
@@ -81,7 +81,6 @@ class ItemController extends Controller
             'category' => 'required|string|max:255',
             'unit' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
-            'price' => 'required|numeric|min:0',
         ]);
 
         $item->update([
@@ -90,7 +89,6 @@ class ItemController extends Controller
             'category' => $request->category,
             'unit' => $request->unit,
             'amount' => $request->amount,
-            'price' => $request->price,
         ]);
 
         return redirect()->route('add-item')->with('success', 'Item updated successfully!');
@@ -225,3 +223,4 @@ class ItemController extends Controller
         return redirect()->route('pull-out')->with('success', 'Item pulled out successfully!');
     }
 }
+

@@ -21,7 +21,6 @@ class DashboardController extends Controller
 
         // Get inventory statistics
         $totalItems = Item::count();
-        $totalValue = Item::sum(\DB::raw('amount * price'));
         $lowStockItems = Item::where('amount', '<=', 10)->count();
         $outOfStockItems = Item::where('amount', '<=', 0)->count();
 
@@ -29,21 +28,11 @@ class DashboardController extends Controller
         $todayPullIns = PullInLog::whereDate('created_at', $today)->count();
         $weeklyPullIns = PullInLog::where('created_at', '>=', $thisWeek)->count();
         $monthlyPullIns = PullInLog::where('created_at', '>=', $thisMonth)->count();
-        $totalPullInValue = PullInLog::with('item')
-            ->get()
-            ->sum(function ($log) {
-                return $log->quantity * $log->item->price;
-            });
 
         // Get pull-out statistics
         $todayPullOuts = PullOutLog::whereDate('created_at', $today)->count();
         $weeklyPullOuts = PullOutLog::where('created_at', '>=', $thisWeek)->count();
         $monthlyPullOuts = PullOutLog::where('created_at', '>=', $thisMonth)->count();
-        $totalPullOutValue = PullOutLog::with('item')
-            ->get()
-            ->sum(function ($log) {
-                return $log->quantity * $log->item->price;
-            });
 
         // Get recent activities (last 10 of each)
         $recentPullIns = PullInLog::with(['item', 'user'])
@@ -56,8 +45,8 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        // Get top items by value
-        $topItemsByValue = Item::orderByRaw('amount * price DESC')
+        // Get top items by quantity
+        $topItemsByQuantity = Item::orderBy('amount', 'DESC')
             ->limit(5)
             ->get();
 
@@ -71,10 +60,9 @@ class DashboardController extends Controller
         // Get category breakdown
         $categoryStats = Item::select('category')
             ->selectRaw('COUNT(*) as count')
-            ->selectRaw('SUM(amount * price) as total_value')
             ->selectRaw('SUM(amount) as total_quantity')
             ->groupBy('category')
-            ->orderBy('total_value', 'desc')
+            ->orderBy('total_quantity', 'desc')
             ->get();
 
         // Get monthly trends (last 6 months)
@@ -98,7 +86,6 @@ class DashboardController extends Controller
             'statistics' => [
                 'inventory' => [
                     'total_items' => $totalItems,
-                    'total_value' => $totalValue,
                     'low_stock_items' => $lowStockItems,
                     'out_of_stock_items' => $outOfStockItems,
                 ],
@@ -106,20 +93,18 @@ class DashboardController extends Controller
                     'today' => $todayPullIns,
                     'weekly' => $weeklyPullIns,
                     'monthly' => $monthlyPullIns,
-                    'total_value' => $totalPullInValue,
                 ],
                 'pull_outs' => [
                     'today' => $todayPullOuts,
                     'weekly' => $weeklyPullOuts,
                     'monthly' => $monthlyPullOuts,
-                    'total_value' => $totalPullOutValue,
                 ],
             ],
             'recent_activities' => [
                 'pull_ins' => $recentPullIns,
                 'pull_outs' => $recentPullOuts,
             ],
-            'top_items_by_value' => $topItemsByValue,
+            'top_items_by_quantity' => $topItemsByQuantity,
             'low_stock_items' => $lowStockItemsList,
             'category_stats' => $categoryStats,
             'monthly_trends' => $monthlyTrends,

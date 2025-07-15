@@ -10,7 +10,6 @@ interface Item {
   category: string;
   unit: string;
   amount: number;
-  price: number;
   created_at: string;
 }
 
@@ -387,9 +386,6 @@ export default function PullOut({ auth, systemSettings, items, units, statistics
                         Unit
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Action
                       </th>
                     </tr>
@@ -424,9 +420,6 @@ export default function PullOut({ auth, systemSettings, items, units, statistics
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {units[item.unit] || item.unit}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ₱{parseFloat(item.price.toString()).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
@@ -588,10 +581,6 @@ export default function PullOut({ auth, systemSettings, items, units, statistics
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">₱{parseFloat(selectedItem.price.toString()).toFixed(2)}</p>
-                          <p className="text-xs text-gray-500">per {units[selectedItem.unit] || selectedItem.unit}</p>
-                        </div>
                       </div>
                     </div>
 
@@ -644,14 +633,6 @@ export default function PullOut({ auth, systemSettings, items, units, statistics
                             </span>
                             <span className="text-sm font-bold text-red-800">
                               {(parseFloat(selectedItem.amount.toString()) - parseFloat(data.quantity || '0')).toFixed(2)} {units[selectedItem.unit] || selectedItem.unit}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center mt-1">
-                            <span className="text-sm text-red-700">
-                              Value Dispatched:
-                            </span>
-                            <span className="text-sm font-medium text-red-700">
-                              ₱{(parseFloat(data.quantity || '0') * parseFloat(selectedItem.price.toString())).toFixed(2)}
                             </span>
                           </div>
                         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import { Layout } from '@/Components/Layout';
-import { Plus, Package, AlertCircle, Edit2, Trash2, X, Search, ChevronLeft, ChevronRight, TrendingUp, Clock, DollarSign } from 'lucide-react';
+import { Plus, Package, AlertCircle, Edit2, Trash2, X, Search, ChevronLeft, ChevronRight, TrendingUp, Clock } from 'lucide-react';
 
 interface Item {
   id: number;
@@ -10,9 +10,17 @@ interface Item {
   category: string;
   unit: string;
   amount: number;
-  price: number;
   created_at: string;
-  user?: {
+}
+
+interface ItemAddLog {
+  id: number;
+  item_id: number;
+  initial_quantity: number;
+  notes: string;
+  created_at: string;
+  item: Item;
+  user: {
     id: number;
     name: string;
     email: string;
@@ -39,9 +47,8 @@ interface AddItemProps {
     todayAdded: number;
     thisWeekAdded: number;
     totalItems: number;
-    totalValue: number;
   };
-  recentAdditions: Item[];
+  recentAdditions: ItemAddLog[];
   flash?: {
     success?: string;
     error?: string;
@@ -61,7 +68,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
     category: '',
     unit: '',
     amount: '',
-    price: '',
   });
 
   // Filter items based on search term
@@ -117,7 +123,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
       category: item.category,
       unit: item.unit,
       amount: item.amount.toString(),
-      price: item.price.toString(),
     });
     setIsModalOpen(true);
   };
@@ -219,7 +224,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -269,22 +274,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Items</dt>
                   <dd className="text-lg font-medium text-gray-900">{statistics.totalItems}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-8 w-8 bg-yellow-100 rounded-md">
-                  <DollarSign className="h-5 w-5 text-yellow-600" />
-                </div>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Value</dt>
-                  <dd className="text-lg font-medium text-gray-900">₱{statistics.totalValue.toFixed(2)}</dd>
                 </dl>
               </div>
             </div>
@@ -358,12 +347,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                   )}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Grand Total</p>
-                <p className="text-2xl font-bold text-green-600">
-                  ₱{items.reduce((total, item) => total + (parseFloat(item.amount.toString()) * parseFloat(item.price.toString())), 0).toFixed(2)}
-                </p>
-              </div>
             </div>
           </div>
 
@@ -407,12 +390,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                         Current Stock
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
@@ -434,12 +411,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {parseFloat(item.amount.toString()).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          ₱{parseFloat(item.price.toString()).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                          ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                           <button
@@ -526,10 +497,11 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
           )}
         </div>
 
-        {/* Recent Additions */}
+        {/* Recent Item Additions */}
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <div className="px-4 py-5 sm:px-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Item Additions</h3>
+            <p className="mt-1 text-sm text-gray-500">Items that were recently added to inventory (not modified through pull-in/out)</p>
           </div>
           {recentAdditions.length === 0 ? (
             <div className="text-center py-12">
@@ -539,29 +511,27 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
             </div>
           ) : (
             <ul className="divide-y divide-gray-200">
-              {recentAdditions.map((item) => (
-                <li key={item.id} className="px-4 py-4 sm:px-6">
+              {recentAdditions.map((addLog) => (
+                <li key={addLog.id} className="px-4 py-4 sm:px-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
-                        <Plus className="h-5 w-5 text-blue-400" />
+                        <Plus className="h-5 w-5 text-green-500" />
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {item.name} - {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
+                          {addLog.item.name} - {parseFloat(addLog.initial_quantity.toString()).toFixed(2)} {units[addLog.item.unit] || addLog.item.unit}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {item.category} • ₱{parseFloat(item.price.toString()).toFixed(2)} per {units[item.unit] || item.unit}
-                          {item.user && (
-                            <span className="ml-2">• by {item.user.name}</span>
+                          {addLog.item.category}
+                          <span className="ml-2">• by {addLog.user.name}</span>
+                          {addLog.notes && addLog.notes !== 'Initial item creation' && (
+                            <span className="ml-2">• {addLog.notes}</span>
                           )}
-                          <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded text-green-800">
-                            Total Value: ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
-                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500">{formatRelativeTime(item.created_at)}</div>
+                    <div className="text-sm text-gray-500">{formatRelativeTime(addLog.created_at)}</div>
                   </div>
                 </li>
               ))}
@@ -613,7 +583,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                       {/* Description */}
                       <div>
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                          Description(Optional)
+                          Description (Optional)
                         </label>
                         <textarea
                           id="description"
@@ -684,24 +654,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                           {errors.unit && <p className="mt-1 text-sm text-red-600">{errors.unit}</p>}
                         </div>
                       </div>
-
-                      {/* Price */}
-                      <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          id="price"
-                          step="0.01"
-                          min="0"
-                          value={data.price}
-                          onChange={(e) => setData('price', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          required
-                        />
-                        {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
-                      </div>
                     </div>
                   </div>
 
@@ -730,3 +682,4 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
     </Layout>
   );
 }
+

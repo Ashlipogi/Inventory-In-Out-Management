@@ -7,7 +7,6 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  DollarSign,
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
@@ -23,7 +22,6 @@ interface Item {
   category: string;
   unit: string;
   amount: number;
-  price: number;
   created_at: string;
 }
 
@@ -56,7 +54,6 @@ interface PullOutLog {
 interface CategoryStat {
   category: string;
   count: number;
-  total_value: number;
   total_quantity: number;
 }
 
@@ -83,7 +80,6 @@ interface DashboardProps {
   statistics: {
     inventory: {
       total_items: number;
-      total_value: number;
       low_stock_items: number;
       out_of_stock_items: number;
     };
@@ -91,20 +87,18 @@ interface DashboardProps {
       today: number;
       weekly: number;
       monthly: number;
-      total_value: number;
     };
     pull_outs: {
       today: number;
       weekly: number;
       monthly: number;
-      total_value: number;
     };
   };
   recent_activities: {
     pull_ins: PullInLog[];
     pull_outs: PullOutLog[];
   };
-  top_items_by_value: Item[];
+  top_items_by_quantity: Item[];
   low_stock_items: Item[];
   category_stats: CategoryStat[];
   monthly_trends: MonthlyTrend[];
@@ -116,7 +110,7 @@ export default function Dashboard({
   systemSettings,
   statistics,
   recent_activities,
-  top_items_by_value,
+  top_items_by_quantity,
   low_stock_items,
   category_stats,
   monthly_trends,
@@ -170,7 +164,7 @@ export default function Dashboard({
         </div>
 
         {/* Main Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total Items */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
@@ -180,19 +174,6 @@ export default function Dashboard({
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
                 <Package className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Total Inventory Value */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">₱{parseFloat(statistics.inventory.total_value.toString()).toFixed(2)}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <DollarSign className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </div>
@@ -247,10 +228,6 @@ export default function Dashboard({
                 <span className="text-sm text-gray-600">This Month</span>
                 <span className="text-sm font-medium text-gray-900">{statistics.pull_ins.monthly} items</span>
               </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                <span className="text-sm font-medium text-gray-600">Total Value</span>
-                <span className="text-sm font-bold text-green-600">₱{parseFloat(statistics.pull_ins.total_value.toString()).toFixed(2)}</span>
-              </div>
             </div>
           </div>
 
@@ -274,10 +251,6 @@ export default function Dashboard({
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">This Month</span>
                 <span className="text-sm font-medium text-gray-900">{statistics.pull_outs.monthly} items</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                <span className="text-sm font-medium text-gray-600">Total Value</span>
-                <span className="text-sm font-bold text-red-600">₱{parseFloat(statistics.pull_outs.total_value.toString()).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -329,7 +302,6 @@ export default function Dashboard({
                       <span className="text-sm text-gray-500">{category.count} items</span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-gray-500">₱{parseFloat(category.total_value.toString()).toFixed(2)}</span>
                       <span className="text-xs text-gray-500">{parseFloat(category.total_quantity.toString()).toFixed(2)} units</span>
                     </div>
                   </div>
@@ -341,29 +313,26 @@ export default function Dashboard({
 
         {/* Top Items and Low Stock */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Items by Value */}
+          {/* Top Items by Quantity */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 bg-green-100 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-green-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Top Items by Value</h3>
+              <h3 className="text-lg font-medium text-gray-900">Top Items by Quantity</h3>
             </div>
             <div className="space-y-3">
-              {top_items_by_value.map((item, index) => (
+              {top_items_by_quantity.map((item, index) => (
                 <div key={item.id} className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-900">{item.name}</span>
                       <span className="text-sm font-bold text-green-600">
-                        ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
+                        {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-xs text-gray-500">{item.category}</span>
-                      <span className="text-xs text-gray-500">
-                        {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
-                      </span>
                     </div>
                   </div>
                 </div>
