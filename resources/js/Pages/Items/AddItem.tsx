@@ -484,7 +484,10 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                         Profit Margin
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Value
+                        Overall Cost Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Value with Profit
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -523,6 +526,9 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                           }`}>
                             {calculateProfitMargin(item.price, item.costprice)}%
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                        ₱{(parseFloat(item.amount.toString()) * parseFloat(item.costprice.toString())).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                           ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
