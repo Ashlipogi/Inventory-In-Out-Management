@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import { Layout } from '@/Components/Layout';
-import { Plus, Package, AlertCircle, Edit2, Trash2, X, Search, ChevronLeft, ChevronRight, TrendingUp, Clock, DollarSign } from 'lucide-react';
+import { Plus, Package, AlertCircle, Edit2, Trash2, X, Search, ChevronLeft, ChevronRight, TrendingUp, Clock, DollarSign, TrendingDown } from 'lucide-react';
 
 interface Item {
   id: number;
@@ -11,6 +11,7 @@ interface Item {
   unit: string;
   amount: number;
   price: number;
+  costprice: number;
   created_at: string;
   user?: {
     id: number;
@@ -40,6 +41,8 @@ interface AddItemProps {
     thisWeekAdded: number;
     totalItems: number;
     totalValue: number;
+    totalCostValue: number;
+    totalProfit: number;
   };
   recentAdditions: Item[];
   flash?: {
@@ -62,6 +65,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
     unit: '',
     amount: '',
     price: '',
+    costprice: '',
   });
 
   // Filter items based on search term
@@ -118,6 +122,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
       unit: item.unit,
       amount: item.amount.toString(),
       price: item.price.toString(),
+      costprice: item.costprice.toString(),
     });
     setIsModalOpen(true);
   };
@@ -174,6 +179,13 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
     }
   };
 
+  const calculateProfitMargin = (price: number, costprice: number) => {
+    if (costprice > 0) {
+      return (((price - costprice) / costprice) * 100).toFixed(1);
+    }
+    return '0.0';
+  };
+
   return (
     <Layout
       header={
@@ -190,7 +202,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
     >
       <Head title="Add Item" />
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Success/Error Messages */}
         {flash?.success && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
@@ -219,7 +231,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -283,8 +295,24 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Value</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Selling Value</dt>
                   <dd className="text-lg font-medium text-gray-900">₱{statistics.totalValue.toFixed(2)}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-emerald-100 rounded-md">
+                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Expected Profit</dt>
+                  <dd className="text-lg font-medium text-gray-900">₱{statistics.totalProfit.toFixed(2)}</dd>
                 </dl>
               </div>
             </div>
@@ -363,6 +391,9 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                 <p className="text-2xl font-bold text-green-600">
                   ₱{items.reduce((total, item) => total + (parseFloat(item.amount.toString()) * parseFloat(item.price.toString())), 0).toFixed(2)}
                 </p>
+                <p className="text-sm text-gray-500">
+                  Cost: ₱{items.reduce((total, item) => total + (parseFloat(item.amount.toString()) * parseFloat(item.costprice.toString())), 0).toFixed(2)}
+                </p>
               </div>
             </div>
           </div>
@@ -407,10 +438,16 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                         Current Stock
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
+                        Cost Price
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total
+                        Selling Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Profit Margin
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Value
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
@@ -436,7 +473,19 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                           {parseFloat(item.amount.toString()).toFixed(2)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₱{parseFloat(item.costprice.toString()).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           ₱{parseFloat(item.price.toString()).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            parseFloat(calculateProfitMargin(item.price, item.costprice)) > 0
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {calculateProfitMargin(item.price, item.costprice)}%
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                           ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
@@ -551,12 +600,15 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                           {item.name} - {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {item.category} • ₱{parseFloat(item.price.toString()).toFixed(2)} per {units[item.unit] || item.unit}
+                          {item.category} • Cost: ₱{parseFloat(item.costprice.toString()).toFixed(2)} • Selling: ₱{parseFloat(item.price.toString()).toFixed(2)}
                           {item.user && (
                             <span className="ml-2">• by {item.user.name}</span>
                           )}
                           <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded text-green-800">
                             Total Value: ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
+                          </span>
+                          <span className="ml-2 text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
+                            Profit: ₱{(parseFloat(item.amount.toString()) * (parseFloat(item.price.toString()) - parseFloat(item.costprice.toString()))).toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -613,7 +665,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                       {/* Description */}
                       <div>
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                          Description(Optional)
+                          Description (Optional)
                         </label>
                         <textarea
                           id="description"
@@ -643,7 +695,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                       </div>
 
                       <div className="flex gap-4">
-                        {/* Quantity */}
+                        {/* Stock */}
                         <div className="w-1/2">
                           <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
                             Quantity
@@ -686,22 +738,58 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                       </div>
 
                       {/* Price */}
-                      <div>
-                        <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                          Price
-                        </label>
-                        <input
-                          type="number"
-                          id="price"
-                          step="0.01"
-                          min="0"
-                          value={data.price}
-                          onChange={(e) => setData('price', e.target.value)}
-                          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                          required
-                        />
-                        {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+                      <div className="flex gap-4">
+                        <div className="w-1/2">
+                          <label htmlFor="costprice" className="block text-sm font-medium text-gray-700">
+                            Cost Price
+                          </label>
+                          <input
+                            type="number"
+                            id="costprice"
+                            step="0.01"
+                            min="0"
+                            value={data.costprice}
+                            onChange={(e) => setData('costprice', e.target.value)}
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            required
+                          />
+                          {errors.costprice && <p className="mt-1 text-sm text-red-600">{errors.costprice}</p>}
+                        </div>
+                        <div className="w-1/2">
+                          <label htmlFor="price" className="block text-sm font-medium text-gray-700">
+                            Selling Price
+                          </label>
+                          <input
+                            type="number"
+                            id="price"
+                            step="0.01"
+                            min="0"
+                            value={data.price}
+                            onChange={(e) => setData('price', e.target.value)}
+                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                            required
+                          />
+                          {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+                        </div>
                       </div>
+
+                      {/* Profit Preview */}
+                      {data.costprice && data.price && (
+                        <div className="bg-gray-50 p-4 rounded-md">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Profit per unit:</span>
+                            <span className="font-medium text-gray-900">
+                              ₱{(parseFloat(data.price) - parseFloat(data.costprice)).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Profit margin:</span>
+                            <span className="font-medium text-gray-900">
+                              {calculateProfitMargin(parseFloat(data.price), parseFloat(data.costprice))}%
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

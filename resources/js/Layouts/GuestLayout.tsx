@@ -3,23 +3,28 @@ import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren } from 'react';
 
 export default function Guest({ children }: PropsWithChildren) {
-    const { systemSettings } = usePage().props as any;
+    const { systemSettings,systemName } = usePage().props as any;
 
     return (
-        <div className="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0">
-            <div className="flex flex-col items-center">
-                <Link href="/">
-                    <ApplicationLogo
-                        systemSettings={systemSettings}
-                        className="h-20 w-20 fill-current text-gray-500"
-                        width="80px"
-                        height="80px"
-                    />
-                </Link>
-            </div>
+        <div className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
+            <div className="flex w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-lg">
+                {/* Left Column */}
+                <div className="flex w-1/2 flex-col items-center justify-center bg-gray-200 p-8">
+                    <Link href="/">
+                        <ApplicationLogo
+                            systemSettings={systemSettings}
+                            className="h-20 w-20 fill-current text-gray-500"
+                        />
+                    </Link>
+                    <h2 className="mt-6 text-2xl font-bold text-gray-700 text-center">
+                        {systemSettings?.system_name || ''}
+                    </h2>
+                </div>
 
-            <div className="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
-                {children}
+                {/* Right Column */}
+                <div className="w-1/2 p-8">
+                    {children}
+                </div>
             </div>
         </div>
     );

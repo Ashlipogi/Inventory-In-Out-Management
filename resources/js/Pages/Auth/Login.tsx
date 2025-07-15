@@ -43,7 +43,7 @@ export default function Login({
 
     return (
         <GuestLayout>
-            <Head title="Log in" />
+        <Head title="Log in" />
             <Toaster position="top-right" />
 
             <div className="w-full max-w-md space-y-8">

@@ -1,8 +1,7 @@
-
 import React, { useState, useMemo } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { Layout } from '@/Components/Layout';
-import { ArrowDownToLine, Package, TrendingUp, Clock, Search, Plus, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowDownToLine, Package, TrendingUp, Clock, Search, Plus, X, AlertCircle, ChevronLeft, ChevronRight, DollarSign, TrendingDown } from 'lucide-react';
 
 interface Item {
   id: number;
@@ -12,6 +11,7 @@ interface Item {
   unit: string;
   amount: number;
   price: number;
+  costprice: number;
   created_at: string;
 }
 
@@ -51,6 +51,9 @@ interface PullInProps {
     todayReceived: number;
     thisWeekReceived: number;
     totalItems: number;
+    totalCostValue: number;
+    totalSellingValue: number;
+    totalPotentialProfit: number;
   };
   recentActivity: PullInLog[];
   flash?: {
@@ -159,6 +162,13 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
     }
   };
 
+  const calculateProfitMargin = (price: number, costprice: number) => {
+    if (costprice > 0) {
+      return (((price - costprice) / costprice) * 100).toFixed(1);
+    }
+    return '0.0';
+  };
+
   return (
     <Layout
       header={
@@ -175,7 +185,7 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
     >
       <Head title="Pull In" />
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Success/Error Messages */}
         {flash?.success && (
           <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
@@ -204,7 +214,7 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -254,6 +264,54 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Items</dt>
                   <dd className="text-lg font-medium text-gray-900">{statistics.totalItems}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-red-100 rounded-md">
+                  <TrendingDown className="h-5 w-5 text-red-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Cost Value</dt>
+                  <dd className="text-lg font-medium text-gray-900">₱{statistics.totalCostValue?.toFixed(2) || '0.00'}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-yellow-100 rounded-md">
+                  <DollarSign className="h-5 w-5 text-yellow-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Selling Value</dt>
+                  <dd className="text-lg font-medium text-gray-900">₱{statistics.totalSellingValue?.toFixed(2) || '0.00'}</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-8 w-8 bg-emerald-100 rounded-md">
+                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                </div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Potential Profit</dt>
+                  <dd className="text-lg font-medium text-gray-900">₱{statistics.totalPotentialProfit?.toFixed(2) || '0.00'}</dd>
                 </dl>
               </div>
             </div>
@@ -319,6 +377,15 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                   )}
                 </p>
               </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">Total Inventory Value</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ₱{items.reduce((total, item) => total + (parseFloat(item.amount.toString()) * parseFloat(item.price.toString())), 0).toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Cost: ₱{items.reduce((total, item) => total + (parseFloat(item.amount.toString()) * parseFloat(item.costprice.toString())), 0).toFixed(2)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -359,7 +426,13 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                         Unit
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Price
+                        Cost Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Selling Price
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Profit Margin
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Action
@@ -385,7 +458,19 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                           {units[item.unit] || item.unit}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ₱{parseFloat(item.costprice.toString()).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           ₱{parseFloat(item.price.toString()).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            parseFloat(calculateProfitMargin(item.price, item.costprice)) > 0
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {calculateProfitMargin(item.price, item.costprice)}%
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
@@ -498,6 +583,12 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                               {activity.notes}
                             </span>
                           )}
+                          <span className="ml-2 text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
+                            Cost: ₱{(parseFloat(activity.quantity.toString()) * parseFloat(activity.item.costprice.toString())).toFixed(2)}
+                          </span>
+                          <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded text-green-800">
+                            Value: ₱{(parseFloat(activity.quantity.toString()) * parseFloat(activity.item.price.toString())).toFixed(2)}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -541,10 +632,17 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                             <span>Category: {selectedItem.category}</span>
                             <span>Current Stock: {parseFloat(selectedItem.amount.toString()).toFixed(2)} {units[selectedItem.unit] || selectedItem.unit}</span>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">₱{parseFloat(selectedItem.price.toString()).toFixed(2)}</p>
-                          <p className="text-xs text-gray-500">per {units[selectedItem.unit] || selectedItem.unit}</p>
+                          <div className="mt-1 flex items-center space-x-4 text-sm">
+                            <span className="text-gray-600">Cost: ₱{parseFloat(selectedItem.costprice.toString()).toFixed(2)}</span>
+                            <span className="text-gray-600">Selling: ₱{parseFloat(selectedItem.price.toString()).toFixed(2)}</span>
+                            <span className={`font-medium ${
+                              parseFloat(calculateProfitMargin(selectedItem.price, selectedItem.costprice)) > 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}>
+                              Margin: {calculateProfitMargin(selectedItem.price, selectedItem.costprice)}%
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -598,10 +696,26 @@ export default function PullIn({ auth, systemSettings, items, units, statistics,
                           </div>
                           <div className="flex justify-between items-center mt-1">
                             <span className="text-sm text-green-700">
-                              Total Value:
+                              Cost Investment:
+                            </span>
+                            <span className="text-sm font-medium text-green-700">
+                              ₱{(parseFloat(data.quantity || '0') * parseFloat(selectedItem.costprice.toString())).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="text-sm text-green-700">
+                              Potential Value:
                             </span>
                             <span className="text-sm font-medium text-green-700">
                               ₱{(parseFloat(data.quantity || '0') * parseFloat(selectedItem.price.toString())).toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center mt-1">
+                            <span className="text-sm text-green-700">
+                              Expected Profit:
+                            </span>
+                            <span className="text-sm font-bold text-green-700">
+                              ₱{(parseFloat(data.quantity || '0') * (parseFloat(selectedItem.price.toString()) - parseFloat(selectedItem.costprice.toString()))).toFixed(2)}
                             </span>
                           </div>
                         </div>

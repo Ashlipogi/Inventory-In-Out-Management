@@ -16,10 +16,12 @@ class Item extends Model
         'unit',
         'amount',
         'price',
+        'costprice',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'costprice' => 'decimal:2',
         'amount' => 'decimal:2',
     ];
 
@@ -46,5 +48,36 @@ class Item extends Model
         ];
     }
 
+    // Calculate profit margin
+    public function getProfitMarginAttribute()
+    {
+        if ($this->costprice > 0) {
+            return (($this->price - $this->costprice) / $this->costprice) * 100;
+        }
+        return 0;
+    }
 
+    // Calculate profit amount
+    public function getProfitAmountAttribute()
+    {
+        return $this->price - $this->costprice;
+    }
+
+    // Calculate total cost value
+    public function getTotalCostValueAttribute()
+    {
+        return $this->amount * $this->costprice;
+    }
+
+    // Calculate total selling value
+    public function getTotalSellingValueAttribute()
+    {
+        return $this->amount * $this->price;
+    }
+
+    // Calculate total profit
+    public function getTotalProfitAttribute()
+    {
+        return $this->amount * ($this->price - $this->costprice);
+    }
 }

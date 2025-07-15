@@ -45,6 +45,12 @@ class ItemController extends Controller
                 'totalValue' => $items->sum(function($item) {
                     return $item->amount * $item->price;
                 }),
+                'totalCostValue' => $items->sum(function($item) {
+                    return $item->amount * $item->costprice;
+                }),
+                'totalProfit' => $items->sum(function($item) {
+                    return $item->amount * ($item->price - $item->costprice);
+                }),
             ],
             'recentAdditions' => $recentAdditions,
         ]);
@@ -59,6 +65,7 @@ class ItemController extends Controller
             'unit' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
             'price' => 'required|numeric|min:0',
+            'costprice' => 'required|numeric|min:0',
         ]);
 
         Item::create([
@@ -68,6 +75,7 @@ class ItemController extends Controller
             'unit' => $request->unit,
             'amount' => $request->amount,
             'price' => $request->price,
+            'costprice' => $request->costprice,
         ]);
 
         return redirect()->route('add-item')->with('success', 'Item added successfully!');
@@ -82,6 +90,7 @@ class ItemController extends Controller
             'unit' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
             'price' => 'required|numeric|min:0',
+            'costprice' => 'required|numeric|min:0',
         ]);
 
         $item->update([
@@ -91,6 +100,7 @@ class ItemController extends Controller
             'unit' => $request->unit,
             'amount' => $request->amount,
             'price' => $request->price,
+            'costprice' => $request->costprice,
         ]);
 
         return redirect()->route('add-item')->with('success', 'Item updated successfully!');
@@ -127,6 +137,15 @@ class ItemController extends Controller
                 'todayReceived' => $todayReceived,
                 'thisWeekReceived' => $thisWeekReceived,
                 'totalItems' => $items->count(),
+                'totalCostValue' => $items->sum(function($item) {
+                    return $item->amount * $item->costprice;
+                }),
+                'totalSellingValue' => $items->sum(function($item) {
+                    return $item->amount * $item->price;
+                }),
+                'totalPotentialProfit' => $items->sum(function($item) {
+                    return $item->amount * ($item->price - $item->costprice);
+                }),
             ],
             'recentActivity' => $recentActivity,
         ]);
@@ -188,6 +207,15 @@ class ItemController extends Controller
                 'todayDispatched' => $todayDispatched,
                 'thisWeekDispatched' => $thisWeekDispatched,
                 'lowStockAlerts' => $lowStockItems->count(),
+                'totalCostValue' => $items->sum(function($item) {
+                    return $item->amount * $item->costprice;
+                }),
+                'totalSellingValue' => $items->sum(function($item) {
+                    return $item->amount * $item->price;
+                }),
+                'totalPotentialProfit' => $items->sum(function($item) {
+                    return $item->amount * ($item->price - $item->costprice);
+                }),
             ],
             'recentActivity' => $recentActivity,
             'lowStockItems' => $lowStockItems,

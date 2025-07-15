@@ -21,7 +21,7 @@ return new class extends Migration
 
         // Insert default system settings
         DB::table('system_settings')->insert([
-            'system_name' => 'System',
+            'system_name' => 'Customize System',
             'system_image' => null,
             'created_at' => now(),
             'updated_at' => now(),

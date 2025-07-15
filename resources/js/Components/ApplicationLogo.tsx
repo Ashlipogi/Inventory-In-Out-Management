@@ -19,7 +19,7 @@ export default function ApplicationLogo({ systemSettings, ...props }: Applicatio
 
     const logoSrc = systemSettings?.system_image && !imageError
         ? `/imgs/system_image/${systemSettings.system_image}`
-        : '/imgs/Ashli.png'; // Fallback to your default image
+        : '/imgs/Ashli.png';
 
     return (
         <div

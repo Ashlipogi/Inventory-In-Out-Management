@@ -22,6 +22,15 @@ class DashboardController extends Controller
         // Get inventory statistics
         $totalItems = Item::count();
         $totalValue = Item::sum(\DB::raw('amount * price'));
+        $totalCostValue = Item::sum(\DB::raw('amount * costprice'));
+        $totalProfit = Item::sum(\DB::raw('amount * (price - costprice)'));
+
+        // Calculate average profit margin
+        $averageProfitMargin = 0;
+        if ($totalCostValue > 0) {
+            $averageProfitMargin = ($totalProfit / $totalCostValue) * 100;
+        }
+
         $lowStockItems = Item::where('amount', '<=', 10)->count();
         $outOfStockItems = Item::where('amount', '<=', 0)->count();
 
@@ -58,6 +67,11 @@ class DashboardController extends Controller
 
         // Get top items by value
         $topItemsByValue = Item::orderByRaw('amount * price DESC')
+            ->limit(5)
+            ->get();
+
+        // Get top items by profit
+        $topItemsByProfit = Item::orderByRaw('amount * (price - costprice) DESC')
             ->limit(5)
             ->get();
 
@@ -99,6 +113,9 @@ class DashboardController extends Controller
                 'inventory' => [
                     'total_items' => $totalItems,
                     'total_value' => $totalValue,
+                    'total_cost_value' => $totalCostValue,
+                    'total_profit' => $totalProfit,
+                    'average_profit_margin' => $averageProfitMargin,
                     'low_stock_items' => $lowStockItems,
                     'out_of_stock_items' => $outOfStockItems,
                 ],
@@ -120,6 +137,7 @@ class DashboardController extends Controller
                 'pull_outs' => $recentPullOuts,
             ],
             'top_items_by_value' => $topItemsByValue,
+            'top_items_by_profit' => $topItemsByProfit,
             'low_stock_items' => $lowStockItemsList,
             'category_stats' => $categoryStats,
             'monthly_trends' => $monthlyTrends,

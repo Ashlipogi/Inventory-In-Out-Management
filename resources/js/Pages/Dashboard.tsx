@@ -1,4 +1,3 @@
-import React from 'react';
 import { Head } from '@inertiajs/react';
 import { Layout } from '@/Components/Layout';
 import {
@@ -13,7 +12,10 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  Calculator,
+  Target,
+  Wallet
 } from 'lucide-react';
 
 interface Item {
@@ -24,6 +26,7 @@ interface Item {
   unit: string;
   amount: number;
   price: number;
+  costprice: number;
   created_at: string;
 }
 
@@ -84,6 +87,9 @@ interface DashboardProps {
     inventory: {
       total_items: number;
       total_value: number;
+      total_cost_value: number;
+      total_profit: number;
+      average_profit_margin: number;
       low_stock_items: number;
       out_of_stock_items: number;
     };
@@ -105,6 +111,7 @@ interface DashboardProps {
     pull_outs: PullOutLog[];
   };
   top_items_by_value: Item[];
+  top_items_by_profit: Item[];
   low_stock_items: Item[];
   category_stats: CategoryStat[];
   monthly_trends: MonthlyTrend[];
@@ -117,6 +124,7 @@ export default function Dashboard({
   statistics,
   recent_activities,
   top_items_by_value,
+  top_items_by_profit,
   low_stock_items,
   category_stats,
   monthly_trends,
@@ -140,6 +148,13 @@ export default function Dashboard({
     } else {
       return date.toLocaleDateString();
     }
+  };
+
+  const calculateProfitMargin = (price: number, costprice: number) => {
+    if (costprice > 0) {
+      return (((price - costprice) / costprice) * 100).toFixed(1);
+    }
+    return '0.0';
   };
 
   return (
@@ -188,11 +203,53 @@ export default function Dashboard({
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Value</p>
+                <p className="text-sm text-gray-600">Selling Value</p>
                 <p className="text-2xl font-bold text-gray-900">₱{parseFloat(statistics.inventory.total_value.toString()).toFixed(2)}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-full">
                 <DollarSign className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Total Cost Value */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Cost Value</p>
+                <p className="text-2xl font-bold text-gray-900">₱{parseFloat(statistics.inventory.total_cost_value.toString()).toFixed(2)}</p>
+              </div>
+              <div className="p-3 bg-orange-100 rounded-full">
+                <Wallet className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Total Profit */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Expected Profit</p>
+                <p className="text-2xl font-bold text-emerald-600">₱{parseFloat(statistics.inventory.total_profit.toString()).toFixed(2)}</p>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-full">
+                <TrendingUp className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Average Profit Margin */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Avg. Profit Margin</p>
+                <p className="text-2xl font-bold text-purple-600">{statistics.inventory.average_profit_margin.toFixed(1)}%</p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-full">
+                <Calculator className="h-6 w-6 text-purple-600" />
               </div>
             </div>
           </div>
@@ -219,6 +276,24 @@ export default function Dashboard({
               </div>
               <div className="p-3 bg-red-100 rounded-full">
                 <Package className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Profit Ratio */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Profit Ratio</p>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {statistics.inventory.total_cost_value > 0
+                    ? ((statistics.inventory.total_profit / statistics.inventory.total_cost_value) * 100).toFixed(1)
+                    : '0.0'
+                  }%
+                </p>
+              </div>
+              <div className="p-3 bg-indigo-100 rounded-full">
+                <Target className="h-6 w-6 text-indigo-600" />
               </div>
             </div>
           </div>
@@ -339,7 +414,7 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Top Items and Low Stock */}
+        {/* Top Items and Profit Analysis */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Items by Value */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -371,37 +446,76 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Low Stock Alert */}
+          {/* Top Items by Profit */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Calculator className="h-5 w-5 text-emerald-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900">Low Stock Items</h3>
+              <h3 className="text-lg font-medium text-gray-900">Top Items by Profit</h3>
             </div>
-            {low_stock_items.length === 0 ? (
-              <p className="text-sm text-gray-500">No low stock items</p>
-            ) : (
-              <div className="space-y-3">
-                {low_stock_items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                        <span className="text-sm font-medium text-red-600">
-                          {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-gray-500">{item.category}</span>
+            <div className="space-y-3">
+              {top_items_by_profit.map((item, index) => (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                      <span className="text-sm font-bold text-emerald-600">
+                        ₱{(parseFloat(item.amount.toString()) * (parseFloat(item.price.toString()) - parseFloat(item.costprice.toString()))).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-gray-500">{item.category}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        parseFloat(calculateProfitMargin(item.price, item.costprice)) > 0
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {calculateProfitMargin(item.price, item.costprice)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Low Stock Alert */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Low Stock Items</h3>
+          </div>
+          {low_stock_items.length === 0 ? (
+            <p className="text-sm text-gray-500">No low stock items</p>
+          ) : (
+            <div className="space-y-3">
+              {low_stock_items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                      <span className="text-sm font-medium text-red-600">
+                        {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-gray-500">{item.category}</span>
+                      <div className="flex items-center space-x-2">
                         <span className="text-xs text-yellow-600">Low Stock</span>
+                        <span className="text-xs bg-emerald-100 px-2 py-1 rounded text-emerald-800">
+                          Profit: ₱{(parseFloat(item.amount.toString()) * (parseFloat(item.price.toString()) - parseFloat(item.costprice.toString()))).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Recent Activities */}
