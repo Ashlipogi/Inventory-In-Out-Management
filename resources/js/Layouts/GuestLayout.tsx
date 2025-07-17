@@ -3,7 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { PropsWithChildren } from 'react';
 
 export default function Guest({ children }: PropsWithChildren) {
-    const { systemSettings } = usePage().props as any;
+    const { systemSettings,systemName } = usePage().props as any;
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-100 p-6">
@@ -13,11 +13,11 @@ export default function Guest({ children }: PropsWithChildren) {
                     <Link href="/">
                         <ApplicationLogo
                             systemSettings={systemSettings}
-                            className="h-24 w-24 fill-current text-gray-500"
+                            className="h-20 w-20 fill-current text-gray-500"
                         />
                     </Link>
                     <h2 className="mt-6 text-2xl font-bold text-gray-700 text-center">
-                        {systemSettings?.system_name || 'Inventory Management System'}
+                        {systemSettings?.system_name || ''}
                     </h2>
                 </div>
 

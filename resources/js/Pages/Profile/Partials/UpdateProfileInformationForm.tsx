@@ -5,7 +5,7 @@ import TextInput from '@/Components/TextInput';
 import { Transition } from '@headlessui/react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useState } from 'react';
-
+import type { PageProps } from '@/types';
 export default function UpdateProfileInformation({
     mustVerifyEmail,
     status,
@@ -15,16 +15,25 @@ export default function UpdateProfileInformation({
     status?: string;
     className?: string;
 }) {
-    const user = usePage().props.auth.user;
+
+const { auth } = usePage<PageProps>().props;
+const user = auth.user;
     const [previewUrl, setPreviewUrl] = useState<string | null>(
         user.profile_picture_url || null
     );
 
-    const { data, setData, post, progress, errors, processing, recentlySuccessful } = useForm({
-        name: user.name,
-        email: user.email,
-        profile_picture: null as File | null,
-    });
+type ProfileFormData = {
+    name: string;
+    email: string;
+    profile_picture: File | null;
+};
+
+const { data, setData, post, progress, errors, processing, recentlySuccessful } = useForm<ProfileFormData>({
+    name: user.name,
+    email: user.email,
+    profile_picture: null,
+});
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] || null;
