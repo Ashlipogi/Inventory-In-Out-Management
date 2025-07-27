@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Item;
 use App\Models\PullInLog;
 use App\Models\PullOutLog;
+use App\Models\SellLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -21,15 +23,16 @@ class DashboardController extends Controller
 
         // Get inventory statistics
         $totalItems = Item::count();
-        $totalValue = Item::sum(\DB::raw('amount * price'));
-        $totalCostValue = Item::sum(\DB::raw('amount * costprice'));
-        $totalProfit = Item::sum(\DB::raw('amount * (price - costprice)'));
+        $totalValue = Item::sum(DB::raw('amount * price'));
+        $totalCostValue = Item::sum(DB::raw('amount * costprice'));
+        $totalProfit = Item::sum(DB::raw('amount * (price - costprice)'));
 
-        // Calculate average profit margin
-        $averageProfitMargin = 0;
-        if ($totalCostValue > 0) {
-            $averageProfitMargin = ($totalProfit / $totalCostValue) * 100;
-        }
+        // Get actual sales profit (from SellLog)
+        $actualProfit = SellLog::with('item')
+            ->get()
+            ->sum(function ($log) {
+                return $log->quantity * ($log->selling_price - $log->item->costprice);
+            });
 
         $lowStockItems = Item::where('amount', '<=', 10)->count();
         $outOfStockItems = Item::where('amount', '<=', 0)->count();
@@ -115,7 +118,7 @@ class DashboardController extends Controller
                     'total_value' => $totalValue,
                     'total_cost_value' => $totalCostValue,
                     'total_profit' => $totalProfit,
-                    'average_profit_margin' => $averageProfitMargin,
+                    'actual_profit' => $actualProfit,
                     'low_stock_items' => $lowStockItems,
                     'out_of_stock_items' => $outOfStockItems,
                 ],

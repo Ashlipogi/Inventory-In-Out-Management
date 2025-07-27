@@ -31,7 +31,7 @@ useEffect(() => {
         isCollapsed={isSidebarCollapsed}
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         user={auth?.user} // ✅ pass user to Sidebar
-        systemSettings={systemSettings} 
+        systemSettings={systemSettings}
       />
 
       <div className={isSidebarCollapsed ? "pl-16" : "pl-64"}>

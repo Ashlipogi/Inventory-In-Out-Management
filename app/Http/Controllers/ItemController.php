@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\AddItemLog;
 use App\Models\PullInLog;
 use App\Models\PullOutLog;
+use App\Models\SellLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,7 +58,7 @@ class ItemController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:255',
+            'category' => 'nullable|string|max:255',
             'unit' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
             'price' => 'required|numeric|min:0',
@@ -91,7 +92,7 @@ class ItemController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => 'required|string|max:255',
+            'category' => 'nullable|string|max:255',
             'unit' => 'required|string|max:50',
             'amount' => 'required|numeric|min:0',
             'price' => 'required|numeric|min:0',
@@ -271,5 +272,89 @@ class ItemController extends Controller
         ]);
 
         return redirect()->route('pull-out')->with('success', 'Item pulled out successfully!');
+    }
+
+public function sellItem(): Response
+{
+    $items = Item::where('amount', '>', 0)->orderBy('name')->get();
+
+    // Get sell statistics
+    $today = Carbon::today();
+    $thisWeek = Carbon::now()->startOfWeek();
+
+    $todaySold = SellLog::whereDate('created_at', $today)->count();
+    $thisWeekSold = SellLog::where('created_at', '>=', $thisWeek)->count();
+    $todayRevenue = SellLog::whereDate('created_at', $today)->sum('total_amount') ?? 0;
+    $thisWeekRevenue = SellLog::where('created_at', '>=', $thisWeek)->sum('total_amount') ?? 0;
+
+    // Get recent sell activity
+    $recentActivity = SellLog::with(['item', 'user'])
+        ->orderBy('created_at', 'desc')
+        ->limit(10)
+        ->get();
+
+    // Get low stock items (items with amount <= 10)
+    $lowStockItems = Item::where('amount', '<=', 10)
+        ->where('amount', '>', 0)
+        ->orderBy('amount')
+        ->get();
+
+    return Inertia::render('Items/SellItem', [
+        'items' => $items,
+        'units' => Item::getAvailableUnits(),
+        'statistics' => [
+            'todaySold' => $todaySold,
+            'thisWeekSold' => $thisWeekSold,
+            'todayRevenue' => (float)$todayRevenue,
+            'thisWeekRevenue' => (float)$thisWeekRevenue,
+            'totalItems' => $items->count(),
+            'totalCostValue' => (float)$items->sum(function($item) {
+                return $item->amount * $item->costprice;
+            }),
+            'totalSellingValue' => (float)$items->sum(function($item) {
+                return $item->amount * $item->price;
+            }),
+            'totalPotentialProfit' => (float)$items->sum(function($item) {
+                return $item->amount * ($item->price - $item->costprice);
+            }),
+        ],
+        'recentActivity' => $recentActivity,
+        'lowStockItems' => $lowStockItems,
+    ]);
+}
+    public function storeSell(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'item_id' => 'required|exists:items,id',
+            'quantity' => 'required|numeric|min:0.01',
+            'selling_price' => 'required|numeric|min:0',
+            'notes' => 'nullable|string',
+        ]);
+
+        $item = Item::findOrFail($request->item_id);
+
+        // Check if we have enough stock
+        if ($item->amount < $request->quantity) {
+            return redirect()->route('sell-item')->with('error', 'Insufficient stock! Available: ' . $item->amount . ' ' . $item->unit);
+        }
+
+        $totalAmount = $request->quantity * $request->selling_price;
+
+        // Update the item amount by subtracting the quantity
+        $item->update([
+            'amount' => $item->amount - $request->quantity,
+        ]);
+
+        // Log the sell activity
+        SellLog::create([
+            'item_id' => $item->id,
+            'quantity' => $request->quantity,
+            'selling_price' => $request->selling_price,
+            'total_amount' => $totalAmount,
+            'notes' => $request->notes,
+            'user_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('sell-item')->with('success', 'Item sold successfully! Revenue: ₱' . number_format($totalAmount, 2));
     }
 }

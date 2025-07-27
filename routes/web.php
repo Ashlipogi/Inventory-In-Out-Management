@@ -35,6 +35,10 @@ Route::middleware('auth')->group(function () {
     // Pull Out routes
     Route::get('/pull-out', [ItemController::class, 'pullOut'])->name('pull-out');
     Route::post('/pull-out', [ItemController::class, 'storePullOut'])->name('items.pull-out');
+
+    // Sell Item routes
+    Route::get('/sell-item', [ItemController::class, 'sellItem'])->name('sell-item');
+    Route::post('/sell-item', [ItemController::class, 'storeSell'])->name('items.sell');
 });
 
 require __DIR__.'/auth.php';

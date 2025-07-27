@@ -10,7 +10,8 @@ import {
   Building2,
   Package,
   ChevronDown,
-  Plus
+  Plus,
+  ShoppingCart
 } from 'lucide-react';
 
 interface SystemSettings {
@@ -196,7 +197,7 @@ export function Sidebar({ isCollapsed, onToggle, user, systemSettings }: Sidebar
               onClick={() => toggleDropdown("Item")}
               className={cn(
                 "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
-                isActive(["/add-item", "/pull-in", "/pull-out"]) || activeDropdown === "Item"
+                isActive(["/add-item", "/pull-in", "/pull-out", "/sell-item"]) || activeDropdown === "Item"
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
               )}
@@ -219,6 +220,7 @@ export function Sidebar({ isCollapsed, onToggle, user, systemSettings }: Sidebar
               <div className="ml-5 mt-2 border-l border-gray-300 pl-4 space-y-1">
                 {[
                   { path: '/add-item', label: 'Add Item' },
+                  { path: '/sell-item', label: 'Sell Item' },
                   { path: '/pull-in', label: 'Pull In' },
                   { path: '/pull-out', label: 'Pull Out' },
                 ].map(({ path, label }) => (

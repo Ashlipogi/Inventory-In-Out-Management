@@ -504,7 +504,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                           {item.description || 'No description'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.category}
+                          {item.category || 'Uncategorized'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {units[item.unit] || item.unit}
@@ -746,7 +746,7 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                       {/* Category */}
                       <div>
                         <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                          Category
+                          Category (Optional)
                         </label>
                         <input
                           type="text"
@@ -755,7 +755,6 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
                           onChange={(e) => setData('category', e.target.value)}
                           className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                           placeholder="Enter category"
-                          required
                         />
                         {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
                       </div>

@@ -89,7 +89,7 @@ interface DashboardProps {
       total_value: number;
       total_cost_value: number;
       total_profit: number;
-      average_profit_margin: number;
+      actual_profit: number; // Add this line
       low_stock_items: number;
       out_of_stock_items: number;
     };
@@ -174,18 +174,8 @@ export default function Dashboard({
       <Head title="Dashboard" />
 
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Welcome Message */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Welcome back, {auth.user.name}!
-          </h2>
-          <p className="text-gray-600">
-            Here's what's happening with your inventory today.
-          </p>
-        </div>
-
         {/* Main Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Total Items */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
@@ -225,34 +215,28 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Total Profit */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Expected Profit</p>
-                <p className="text-2xl font-bold text-emerald-600">₱{parseFloat(statistics.inventory.total_profit.toString()).toFixed(2)}</p>
-              </div>
-              <div className="p-3 bg-emerald-100 rounded-full">
-                <TrendingUp className="h-6 w-6 text-emerald-600" />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Additional Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Average Profit Margin */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Avg. Profit Margin</p>
-                <p className="text-2xl font-bold text-purple-600">{statistics.inventory.average_profit_margin.toFixed(1)}%</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <Calculator className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
+{/* Overall Profit */}
+<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-sm text-gray-600">Overall Profit</p>
+      <p className="text-2xl font-bold text-emerald-600">
+        ₱{parseFloat(statistics.inventory.actual_profit.toString()).toFixed(2)}
+      </p>
+      <p className="text-xs text-gray-500 mt-1">
+        Potential: ₱{parseFloat(statistics.inventory.total_profit.toString()).toFixed(2)}
+      </p>
+    </div>
+    <div className="p-3 bg-emerald-100 rounded-full">
+      <TrendingUp className="h-6 w-6 text-emerald-600" />
+    </div>
+  </div>
+</div>
 
           {/* Low Stock Items */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -280,23 +264,6 @@ export default function Dashboard({
             </div>
           </div>
 
-          {/* Profit Ratio */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Profit Ratio</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {statistics.inventory.total_cost_value > 0
-                    ? ((statistics.inventory.total_profit / statistics.inventory.total_cost_value) * 100).toFixed(1)
-                    : '0.0'
-                  }%
-                </p>
-              </div>
-              <div className="p-3 bg-indigo-100 rounded-full">
-                <Target className="h-6 w-6 text-indigo-600" />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Pull In/Out Statistics */}
