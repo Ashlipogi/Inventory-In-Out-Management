@@ -15,8 +15,13 @@ import {
   Activity,
   Calculator,
   Target,
-  Wallet
+  Wallet,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import DateRangeFilter from '@/Components/DateRangeFilter';
+import { router } from '@inertiajs/react';
 
 interface Item {
   id: number;
@@ -67,6 +72,13 @@ interface MonthlyTrend {
   month: string;
   pull_ins: number;
   pull_outs: number;
+  sold_items: number;
+}
+
+interface DateRange {
+  startDate: string;
+  endDate: string;
+  label?: string;
 }
 
 interface DashboardProps {
@@ -89,7 +101,7 @@ interface DashboardProps {
       total_value: number;
       total_cost_value: number;
       total_profit: number;
-      actual_profit: number; // Add this line
+      actual_profit: number;
       low_stock_items: number;
       out_of_stock_items: number;
     };
@@ -116,6 +128,7 @@ interface DashboardProps {
   category_stats: CategoryStat[];
   monthly_trends: MonthlyTrend[];
   units: Record<string, string>;
+  dateRange?: DateRange;
 }
 
 export default function Dashboard({
@@ -128,8 +141,20 @@ export default function Dashboard({
   low_stock_items,
   category_stats,
   monthly_trends,
-  units
+  units,
+  dateRange
 }: DashboardProps) {
+  const [currentDateRange, setCurrentDateRange] = useState<DateRange>(() => {
+    if (dateRange) return dateRange;
+
+    const today = new Date().toISOString().split('T')[0];
+    return {
+      startDate: today,
+      endDate: today,
+      label: 'Today'
+    };
+  });
+
   const formatRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -157,16 +182,52 @@ export default function Dashboard({
     return '0.0';
   };
 
+  const handleDateRangeChange = (newDateRange: DateRange) => {
+    setCurrentDateRange(newDateRange);
+
+    // Navigate to the same route with date range parameters
+    router.get(route('dashboard'), {
+      start_date: newDateRange.startDate,
+      end_date: newDateRange.endDate
+    }, {
+      preserveState: true,
+      preserveScroll: true
+    });
+  };
+
+  const formatDateRangeLabel = (range: DateRange) => {
+    if (range.label) return range.label;
+
+    const start = new Date(range.startDate);
+    const end = new Date(range.endDate);
+
+    if (range.startDate === range.endDate) {
+      return `Data for ${start.toLocaleDateString()}`;
+    }
+
+    return `Data from ${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
+  };
+
   return (
     <Layout
       header={
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Home className="h-6 w-6 text-blue-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Home className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-sm text-gray-600">
+                {formatDateRangeLabel(currentDateRange)}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-600">Overview of your inventory management system</p>
+          <div className="flex items-center space-x-4">
+            <DateRangeFilter
+              currentRange={currentDateRange}
+              onDateRangeChange={handleDateRangeChange}
+            />
           </div>
         </div>
       }
@@ -214,29 +275,27 @@ export default function Dashboard({
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Additional Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Average Profit Margin */}
-{/* Overall Profit */}
-<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-  <div className="flex items-center justify-between">
-    <div>
-      <p className="text-sm text-gray-600">Overall Profit</p>
-      <p className="text-2xl font-bold text-emerald-600">
-        ₱{parseFloat(statistics.inventory.actual_profit.toString()).toFixed(2)}
-      </p>
-      <p className="text-xs text-gray-500 mt-1">
-        Potential: ₱{parseFloat(statistics.inventory.total_profit.toString()).toFixed(2)}
-      </p>
-    </div>
-    <div className="p-3 bg-emerald-100 rounded-full">
-      <TrendingUp className="h-6 w-6 text-emerald-600" />
-    </div>
-  </div>
-</div>
+          {/* Overall Profit */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Overall Profit</p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  ₱{parseFloat(statistics.inventory.actual_profit.toString()).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Potential: ₱{parseFloat(statistics.inventory.total_profit.toString()).toFixed(2)}
+                </p>
+              </div>
+              <div className="p-3 bg-emerald-100 rounded-full">
+                <TrendingUp className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
 
           {/* Low Stock Items */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -263,7 +322,6 @@ export default function Dashboard({
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Pull In/Out Statistics */}
@@ -328,128 +386,37 @@ export default function Dashboard({
         {/* Charts and Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Monthly Trends */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-purple-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">Monthly Trends</h3>
-            </div>
-            <div className="space-y-3">
-              {monthly_trends.map((trend, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">{trend.month}</span>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-gray-500">In: {trend.pull_ins}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <span className="text-xs text-gray-500">Out: {trend.pull_outs}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+         {/* Monthly Trends */}
+<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+  <div className="flex items-center space-x-3 mb-4">
+    <div className="p-2 bg-purple-100 rounded-lg">
+      <BarChart3 className="h-5 w-5 text-purple-600" />
+    </div>
+    <h3 className="text-lg font-medium text-gray-900">Monthly Trends</h3>
+  </div>
+  <div className="space-y-3">
+    {monthly_trends.map((trend, index) => (
+      <div key={index} className="flex items-center justify-between">
+        <span className="text-sm text-gray-600">{trend.month}</span>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-xs text-gray-500">In: {trend.pull_ins}</span>
           </div>
-
-          {/* Category Breakdown */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <PieChart className="h-5 w-5 text-indigo-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">Category Breakdown</h3>
-            </div>
-            <div className="space-y-3">
-              {category_stats.slice(0, 5).map((category, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900">{category.category}</span>
-                      <span className="text-sm text-gray-500">{category.count} items</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-gray-500">₱{parseFloat(category.total_value.toString()).toFixed(2)}</span>
-                      <span className="text-xs text-gray-500">{parseFloat(category.total_quantity.toString()).toFixed(2)} units</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+            <span className="text-xs text-gray-500">Out: {trend.pull_outs}</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            <span className="text-xs text-gray-500">Sold: {trend.sold_items}</span>
           </div>
         </div>
-
-        {/* Top Items and Profit Analysis */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Items by Value */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">Top Items by Value</h3>
-            </div>
-            <div className="space-y-3">
-              {top_items_by_value.map((item, index) => (
-                <div key={item.id} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                      <span className="text-sm font-bold text-green-600">
-                        ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-gray-500">{item.category}</span>
-                      <span className="text-xs text-gray-500">
-                        {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top Items by Profit */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <Calculator className="h-5 w-5 text-emerald-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900">Top Items by Profit</h3>
-            </div>
-            <div className="space-y-3">
-              {top_items_by_profit.map((item, index) => (
-                <div key={item.id} className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                      <span className="text-sm font-bold text-emerald-600">
-                        ₱{(parseFloat(item.amount.toString()) * (parseFloat(item.price.toString()) - parseFloat(item.costprice.toString()))).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-gray-500">{item.category}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        parseFloat(calculateProfitMargin(item.price, item.costprice)) > 0
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {calculateProfitMargin(item.price, item.costprice)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Low Stock Alert */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      </div>
+    ))}
+  </div>
+</div>
+   <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2 bg-yellow-100 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-yellow-600" />
@@ -485,6 +452,77 @@ export default function Dashboard({
           )}
         </div>
 
+
+        </div>
+
+        {/* Top Items and Profit Analysis */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Top Items by Value */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">Top Items by Value</h3>
+            </div>
+            <div className="space-y-3">
+              {top_items_by_value.map((item) => (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                      <span className="text-sm font-bold text-green-600">
+                        ₱{(parseFloat(item.amount.toString()) * parseFloat(item.price.toString())).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-gray-500">{item.category}</span>
+                      <span className="text-xs text-gray-500">
+                        {parseFloat(item.amount.toString()).toFixed(2)} {units[item.unit] || item.unit}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top Items by Profit */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Calculator className="h-5 w-5 text-emerald-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">Top Items by Profit</h3>
+            </div>
+            <div className="space-y-3">
+              {top_items_by_profit.map((item) => (
+                <div key={item.id} className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                      <span className="text-sm font-bold text-emerald-600">
+                        ₱{(parseFloat(item.amount.toString()) * (parseFloat(item.price.toString()) - parseFloat(item.costprice.toString()))).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-gray-500">{item.category}</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        parseFloat(calculateProfitMargin(item.price, item.costprice)) > 0
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {calculateProfitMargin(item.price, item.costprice)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+
         {/* Recent Activities */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Pull Ins */}
@@ -496,7 +534,7 @@ export default function Dashboard({
               <h3 className="text-lg font-medium text-gray-900">Recent Pull Ins</h3>
             </div>
             {recent_activities.pull_ins.length === 0 ? (
-              <p className="text-sm text-gray-500">No recent pull in activity</p>
+              <p className="text-sm text-gray-500">No recent pull in activity for selected period</p>
             ) : (
               <div className="space-y-3">
                 {recent_activities.pull_ins.map((activity) => (
@@ -528,7 +566,7 @@ export default function Dashboard({
               <h3 className="text-lg font-medium text-gray-900">Recent Pull Outs</h3>
             </div>
             {recent_activities.pull_outs.length === 0 ? (
-              <p className="text-sm text-gray-500">No recent pull out activity</p>
+              <p className="text-sm text-gray-500">No recent pull out activity for selected period</p>
             ) : (
               <div className="space-y-3">
                 {recent_activities.pull_outs.map((activity) => (

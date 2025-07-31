@@ -84,17 +84,24 @@ export default function AddItem({ auth, systemSettings, items, units, statistics
   });
 
   // Filter items based on search term
-  const filteredItems = useMemo(() => {
-    if (!searchTerm) return items;
+const filteredItems = useMemo(() => {
+  if (!searchTerm) return items;
 
-    const term = searchTerm.toLowerCase();
-    return items.filter(item =>
-      item.name.toLowerCase().includes(term) ||
-      item.description?.toLowerCase().includes(term) ||
-      item.category.toLowerCase().includes(term) ||
-      (units[item.unit] || item.unit).toLowerCase().includes(term)
+  const term = searchTerm.toLowerCase();
+  return items.filter(item => {
+    const name = item.name?.toLowerCase() || '';
+    const description = item.description?.toLowerCase() || '';
+    const category = item.category?.toLowerCase() || '';
+    const unit = (units[item.unit] || item.unit)?.toLowerCase() || '';
+
+    return (
+      name.includes(term) ||
+      description.includes(term) ||
+      category.includes(term) ||
+      unit.includes(term)
     );
-  }, [items, searchTerm, units]);
+  });
+}, [items, searchTerm, units]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredItems.length / rowsPerPage);
